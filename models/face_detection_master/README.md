@@ -22,20 +22,23 @@ pip install git+https://github.com/elliottzheng/face-detection.git@master
 
 ## Usage
 ##### Detect face and five landmarks on single image
+
 ```python
 from skimage import io
-from face_detection import RetinaFace
+from face_data import RetinaFace
 
 detector = RetinaFace()
-img= io.imread('examples/obama.jpg')
+img = io.imread('examples/obama.jpg')
 faces = detector(img)
 box, landmarks, score = faces[0]
 ```
 ##### Running on CPU/GPU
 
 In order to specify the device (GPU or CPU) on which the code will run one can explicitly pass the device id.
+
 ```python
-from face_detection import RetinaFace
+from face_data import RetinaFace
+
 # 0 means using GPU with id 0 for inference
 # default -1: means using cpu for inference
 detector = RetinaFace(gpu_id=0) 
@@ -50,15 +53,15 @@ detector = RetinaFace(gpu_id=0)
 
 All the input images must of the same size.
 
-**Detector with CUDA process batch input faster than the same amount of single input.** 
+**Detector with CUDA process batch input faster than the same amount of single input.**
 
 ```python
 from skimage import io
-from face_detection import RetinaFace
+from face_data import RetinaFace
 
 detector = RetinaFace()
-img= io.imread('examples/obama.jpg')
-all_faces = detector([img,img]) # return faces list of all images
+img = io.imread('examples/obama.jpg')
+all_faces = detector([img, img])  # return faces list of all images
 box, landmarks, score = all_faces[0][0]
 ```
 
