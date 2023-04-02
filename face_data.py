@@ -1,31 +1,24 @@
 import cv2
 import face_detection
-#from models.facenet_pytorch_master.models.mtcnn import MTCNN
-from mtcnn import MTCNN
+import sys, os
 import torch
+from mtcnn import MTCNN
+
+# Disable
+def blockPrint():
+    sys.stdout = open(os.devnull, 'w')
+
+# Restore
+def enablePrint():
+    sys.stdout = sys.__stdout__
+
 
 class FaceDetection():
 
     def __init__(self):
-
-        '''
-        self.dnn_face_detector = cv2.dnn.readNetFromCaffe("C:/Users/jakob/Documents/private projekte/cam_analysis/models/deploy.prototxt.txt", "C:/Users/jakob/Documents/private projekte/cam_analysis/models/res10_300x300_ssd_iter_140000.caffemodel")
-        self.viola_jones_detector = cv2.CascadeClassifier("C:/Users/jakob/Documents/private projekte/cam_analysis/models/haarcascade_frontalface_alt.xml")
-        self.retina_face_detector = detector.RetinaFace(gpu_id=-1)
-        self.cascade_face_detector = cv2.CascadeClassifier("models/haarcascade_frontalface_default.xml")
-        self.hog_face_detector = cv2.HOGDescriptor()
-        self.hog_face_detector.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
-        self.dsfd_detector = face_detection.build_detector("DSFDDetector", confidence_threshold=.5, nms_iou_threshold=.3)
-        '''
-
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-        #self.dsfd_detector = face_detection.build_detector("DSFDDetector", confidence_threshold=.5, nms_iou_threshold=.3)
         self.mtcnn_face_detector = MTCNN()
         self.retina_net_res_net = face_detection.build_detector("RetinaNetResNet50", confidence_threshold=.5, nms_iou_threshold=.3)
-        self.retina_net_mobile_net = face_detection.build_detector("RetinaNetMobileNetV1", confidence_threshold=.5, nms_iou_threshold=.3)
-
         self.count = 0
-
     def overlapping_area(self, p0 ,p1 ,p2 ,p3):
         x, y = 0,1
 
@@ -64,15 +57,12 @@ class FaceDetection():
 
         for face in retina_net_res_net_faces:
             x_1, y_1, x_2, y_2, score = face
-            #cv2.rectangle(frame, (x_1, y_1), (x_2, y_2), (255, 0, 0), 1)
 
             for face in mtcnn_faces:
                 x,y,w,h = face["box"]
-                #cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 1)
                 rect = self.overlapping_area((x,y),(x+w,y+h),(x_1,y_1),(x_2,y_2))
                 if (rect == None): break
                 (x1,x2),(x3,x4) = rect
-                #cv2.rectangle(frame, (x1, x2), (x3,x4), (255, 255, 255), 1)
                 face_name = str(round(self.count / (29.97), 3))
                 while (frame_faces.keys().__contains__(face_name)):
                     face_name += "Q"
@@ -84,30 +74,26 @@ class FaceDetection():
             (p1, p2), (p3, p4) = frame_faces[face]
             # Region of Interest
             roi = frame[p2:p4, p1:p3]
-            #cv2.rectangle(frame, (p1, p2), (p3, p4), (255, 255, 255), 1)
-            print(str(self.count) + ".jpg")
             cv2.imwrite(path + str(self.count) + ".jpg", roi)
 
-    def get_th_frames(self, video_string, path):
+    def get_video_frame_faces(self, video_string, path):
         vid_faces = {}
         self.vid = cv2.VideoCapture(video_string)
         total_frames = int(self.vid.get(cv2.CAP_PROP_FRAME_COUNT))
-        for fno in range(0, total_frames, 5):
-            print(self.count)
-            self.count+=5
-            self.vid.set(cv2.CAP_PROP_POS_FRAMES, fno)
+        for frame_number in range(0, total_frames, 5):
+            self.count += 5
+            self.vid.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
             _, frame = self.vid.read()
             frame_faces = self.get_faces(frame)
             if len(frame_faces) > 0:
-                self.store_image(frame,frame_faces, path)
-                vid_faces[self.count] = frame_faces
-
+                self.store_image(frame, frame_faces, path)
+                vid_faces[self.count]=frame_faces
         # After the loop release the cap object
         self.vid.release()
         return vid_faces
 
 dataPreparation1 = FaceDetection()
-video_faces = dataPreparation1.get_th_frames("C:/Users/jakob/Downloads/gkd_4jakob_2023-03-30_1342/4jakob/20220428_131021.mp4","C:/Users/jakob/Downloads/gkd_4jakob_2023-03-30_1342/faces/")
-#video_faces = dataPreparation1.get_th_frames("C:/Users/jakob/Pictures/Camera Roll/WIN_20230401_21_37_45_Pro.mp4")
+video_faces = dataPreparation1.get_video_frame_faces("C:/Users/jakob/Downloads/gkd_4jakob_2023-03-30_1342/4jakob/20220804_103852.mp4", "C:/Users/jakob/Downloads/gkd_4jakob_2023-03-30_1342/faces/")
+#video_faces = dataPreparation1.get_th_frames("C:/Users/jakob/Pictures/Camera Roll/WIN_20230401_21_37_45_Pro.mp4","C:/Users/jakob/Downloads/gkd_4jakob_2023-03-30_1342/faces/")
 for key in video_faces:
     print(key,video_faces[key])
