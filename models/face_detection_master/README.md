@@ -25,7 +25,7 @@ pip install git+https://github.com/elliottzheng/face-detection.git@master
 
 ```python
 from skimage import io
-from face_data import RetinaFace
+from face_detect import RetinaFace
 
 detector = RetinaFace()
 img = io.imread('examples/obama.jpg')
@@ -37,7 +37,7 @@ box, landmarks, score = faces[0]
 In order to specify the device (GPU or CPU) on which the code will run one can explicitly pass the device id.
 
 ```python
-from face_data import RetinaFace
+from face_detect import RetinaFace
 
 # 0 means using GPU with id 0 for inference
 # default -1: means using cpu for inference
@@ -57,7 +57,7 @@ All the input images must of the same size.
 
 ```python
 from skimage import io
-from face_data import RetinaFace
+from face_detect import RetinaFace
 
 detector = RetinaFace()
 img = io.imread('examples/obama.jpg')
