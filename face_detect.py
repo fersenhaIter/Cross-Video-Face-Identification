@@ -12,10 +12,6 @@ class FaceDetection():
         self.count = 0
         self.frame = numpy.ndarray
 
-        # Enable CUDA for OpenCV
-        cv2.cuda.setDevice(0)
-        self.cuda_frame = cv2.cuda_GpuMat()
-
     def overlapping_area(self, p0 ,p1 ,p2 ,p3):
         x, y = 0,1
 
@@ -56,13 +52,6 @@ class FaceDetection():
         if (mtcnn_faces.__len__() == 0):
             return frame_faces
 
-        # copy frame to GPU
-        self.cuda_frame.upload(self.frame)
-        # calc faces on GPU
-        retina_faces = self.retina_net_res_net.detect(self.cuda_frame).astype(int)
-
-        # copy results back to CPU memory
-        retina_faces = retina_faces.get()
         for (x1, y1, x2, y2, score) in retina_faces:
             x1 = max(x1, 0)
             y1 = max(y1, 0)
@@ -82,7 +71,7 @@ class FaceDetection():
             cv2.imwrite(path + "/" + face + ".jpg", roi)
 
     def get_video_frame_faces(self, video_string, saving_path):
-        print("start:")
+        print("start:") 
         print(datetime.now().strftime("%H:%M:%S"))
         vid_faces = {}
         vid = cv2.VideoCapture(video_string)
