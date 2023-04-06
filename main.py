@@ -34,5 +34,5 @@ class CamAnalysis:
                 timestamp = face.rsplit('.', 1)[0]
                 self.data[len(self.data)] = {"timestamp":timestamp, "file":video, "embeddings":self.face_classification.get_embeddings(video_faces_path + "/" + face)}
 
-cam_analysis = CamAnalysis("result")
+cam_analysis = CamAnalysis("result/")
 cam_analysis.run_data_preparation("videos")
