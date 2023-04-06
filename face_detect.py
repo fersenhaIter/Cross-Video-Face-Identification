@@ -11,6 +11,11 @@ class FaceDetection():
         self.retina_net_res_net = face_detection.build_detector("RetinaNetResNet50", confidence_threshold=.5, nms_iou_threshold=.3)
         self.count = 0
         self.frame = numpy.ndarray
+
+        # Enable CUDA for OpenCV
+        cv2.cuda.setDevice(0)
+        self.cuda_frame = cv2.cuda_GpuMat()
+
     def overlapping_area(self, p0 ,p1 ,p2 ,p3):
         x, y = 0,1
 
@@ -45,11 +50,19 @@ class FaceDetection():
 
     def get_faces(self):
         frame_faces = {}
+
         mtcnn_faces =  [detected_face for detected_face in self.mtcnn_face_detector.detect_faces(self.frame) if detected_face["confidence"]>= 0.9]
         mtcnn_faces =  [detected_face for detected_face in mtcnn_faces if detected_face["box"][2]>= 96 and detected_face["box"][3]>= 96]
         if (mtcnn_faces.__len__() == 0):
             return frame_faces
-        retina_faces = self.retina_net_res_net.detect(self.frame).astype(int)
+
+        # copy frame to GPU
+        self.cuda_frame.upload(self.frame)
+        # calc faces on GPU
+        retina_faces = self.retina_net_res_net.detect(self.cuda_frame).astype(int)
+
+        # copy results back to CPU memory
+        retina_faces = retina_faces.get()
         for (x1, y1, x2, y2, score) in retina_faces:
             x1 = max(x1, 0)
             y1 = max(y1, 0)
