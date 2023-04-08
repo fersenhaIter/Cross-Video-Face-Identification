@@ -1,6 +1,7 @@
 import cv2
 from keras_facenet import FaceNet
 import numpy as np
+import os
 
 class FaceClassification():
 
@@ -22,3 +23,8 @@ class FaceClassification():
     def get_embeddings(self, image_path):
         embeddings = self.facenet.embeddings(self.preprocess_image(image_path))
         return embeddings
+
+    def get_all_video_embeddings(self, video_name):
+        for face in os.listdir("result"+"/"+video_name):
+            print(self.get_embeddings("result"+"/"+video_name+"/"+face).shape)
+            print(":::::::::")
