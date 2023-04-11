@@ -1,6 +1,8 @@
 import face_detect
 import face_classification
 import os
+from scipy.spatial import distance
+import numpy as np
 
 
 class CamAnalysis:
@@ -37,12 +39,6 @@ class CamAnalysis:
                     self.face_detection.get_video_frame_faces(dir, starting_point=0)
 
 
-    def run_face_classification(self):
-        for video in self.video_names:
-            video_faces_path = "result/" + video
-            for face in os.listdir(video_faces_path):
-                timestamp = face.rsplit('.', 1)[0]
-                self.data[len(self.data)] = {"timestamp":timestamp, "file":video, "embeddings":self.face_classification.get_embeddings(video_faces_path + "/" + face)}
-
 cam_analysis = CamAnalysis()
-cam_analysis.run_data_preparation("C:/Users/jakob/Downloads/gkd_4jakob_2023-03-30_1342/4jakob")
+#cam_analysis.run_data_preparation("C:/Users/jakob/Downloads/gkd_4jakob_2023-03-30_1342/4jakob")
+cam_analysis.face_classification.get_classes()

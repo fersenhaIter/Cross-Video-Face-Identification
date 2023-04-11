@@ -24,7 +24,6 @@ class FaceDetection():
         self.retina_net_res_net = face_detection.build_detector("RetinaNetResNet50", confidence_threshold=.5, nms_iou_threshold=.3)
 
 
-
     def overlapping_area(self, p0 ,p1 ,p2 ,p3, get_IoU = False):
         x, y = 0,1
         x_left = max(p0[x], p2[x])
@@ -68,7 +67,7 @@ class FaceDetection():
         '''print(boxes_current_frame)
         print(self.recent_frame_faces)'''
         for recent_face in self.recent_frame_faces:
-            removeable = True
+            removable = True
             p2, p3 = recent_face
             for current_face in boxes_current_frame:
                 (p0,p1) = current_face
@@ -77,17 +76,18 @@ class FaceDetection():
                     break
                 IoUs.append(IoU)
                 if IoU >= 0.6:
+                    print("duplicate!")
                     boxes_current_frame.remove(current_face)
-                    removeable = False
-            if removeable:
+                    removable = False
+            if removable:
                 self.recent_frame_faces.remove(recent_face)
         '''print(boxes_current_frame)
-        print(IoUs)
-        print("\n")'''
+        print(IoUs)'''
         return boxes_current_frame
 
     def get_faces(self):
         frame_faces = {}
+        self.recent_frame_faces = []
         mtcnn_faces =  [detected_face for detected_face in self.mtcnn_face_detector.detect_faces(self.current_frame) if detected_face["confidence"] >= 0.95]
         mtcnn_faces =  [detected_face for detected_face in mtcnn_faces if detected_face["box"][2]>= self.min_face_size and detected_face["box"][3]>= self.min_face_size]
         for face in mtcnn_faces:
@@ -112,8 +112,10 @@ class FaceDetection():
                     (x1, y1), (x2, y2) = rect
                     self.recent_frame_faces.append(((x1, y1), (x2, y2)))
                     face_name = str(round(self.count / self.fps, 2))
+
                     while (frame_faces.keys().__contains__(face_name)):
                         face_name += "0"
+                    print("add face")
                     frame_faces[face_name] = ((int(x1), int(y1)), (int(x2), int(y2)))
         return frame_faces
     def store_image(self, frame_faces):
@@ -131,18 +133,6 @@ class FaceDetection():
         next_frame_gray = cv2.cvtColor(next_frame, cv2.COLOR_BGR2GRAY)
         next_mean_brightness = np.mean(next_frame_gray)/255
         current_frame_gray = cv2.cvtColor(self.current_frame, cv2.COLOR_BGR2GRAY)
-
-        '''
-        #grayscale differences
-        current_frame_gray = cv2.cvtColor(self.current_frame, cv2.COLOR_BGR2GRAY)
-        gray_difference = cv2.absdiff(current_frame_gray, next_frame_gray)
-        gray_difference_mean = np.mean(gray_difference)/255
-    
-        #colour channels differences
-        bgr_difference = cv2.absdiff(current_frame_gray, next_frame_gray)
-        channel_difference = cv2.split(bgr_difference)
-        channel_difference_mean = np.mean(channel_difference)/255
-        '''
 
         #https://docs.opencv.org/3.4/d4/dee/tutorial_optical_flow.html --> param
         #flow for (x,y) stored in third dimension
@@ -165,11 +155,12 @@ class FaceDetection():
         print(f"starting at:{str(starting_point)}")
 
         self.video_name = os.path.basename(video_path).rsplit('.', 1)[0]
-        self.count = starting_point * self.fps
+        self.count = int(starting_point * self.fps)
         vid = cv2.VideoCapture(video_path)
         total_frames = int(vid.get(cv2.CAP_PROP_FRAME_COUNT))
         for frame_number in range(starting_point*29, total_frames, self.scan_frame_rate):
             self.count += 1
+            print(self.count)
             vid.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
             ret, frame = vid.read()
             if ret and self.check_frame_similarity(frame):
@@ -181,6 +172,7 @@ class FaceDetection():
                 '''if cv2.waitKey(1) == ord('q'):
                     break'''
             else:
+                print("to similar")
                 self.current_frame = frame
 
         # After the loop release the cap object
