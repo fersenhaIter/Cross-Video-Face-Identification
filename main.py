@@ -16,7 +16,6 @@ class CamAnalysis:
         last_sec = max([float(face.rsplit('.', 1)[0]) for face in os.listdir(dir)])
         return int(last_sec)
 
-
     def run_data_preparation(self, directory):
         print(directory)
         for file in os.listdir(directory):
@@ -37,7 +36,6 @@ class CamAnalysis:
                     self.face_detection.get_video_frame_faces(dir, starting_point=most_recent_sec)
                 else:
                     self.face_detection.get_video_frame_faces(dir, starting_point=0)
-
 
 cam_analysis = CamAnalysis()
 #cam_analysis.run_data_preparation("C:/Users/jakob/Downloads/gkd_4jakob_2023-03-30_1342/4jakob")

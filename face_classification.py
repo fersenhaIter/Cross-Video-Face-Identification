@@ -1,16 +1,19 @@
-from tabulate import tabulate
-import matplotlib.pyplot as plt
-from sklearn.decomposition import PCA
 import cv2
 from keras_facenet import FaceNet
 import numpy as np
 import os
 
+from matplotlib import pyplot as plt
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+
+
+
 class FaceClassification():
 
     def __init__(self):
         self.facenet = FaceNet()
-        self.pca = PCA(n_components=2)
+        self.embedding_data = {}
 
     def preprocess_image(self ,image_path):
         img = cv2.imread(image_path)
@@ -27,35 +30,32 @@ class FaceClassification():
         img = np.expand_dims(img, axis=0)
         return img
 
-    def get_embeddings(self, image_path_list):
-        image_list = [self.preprocess_image(image_path) for image_path in image_path_list]
-        return self.facenet.embeddings(image_list)
-
-    def get_all_video_embeddings(self, video_name):
-        for face in os.listdir("result"+"/"+video_name):
-            print(self.get_embeddings("result"+"/"+video_name+"/"+face).shape)
-            print(":::::::::")
-
-    def get_embedded_data(self):
-        pass
+    def get_embeddings(self):
+        count = 0
+        for video_name in os.listdir("result"):
+            if os.path.isdir("result/"+video_name):
+                for face_img in os.listdir("result/"+video_name):
+                    self.embedding_data[count] = {"img_name":face_img, "video_source":video_name}
+                    count+=1
+        image_list = [cv2.imread("result/"+self.embedding_data[image]["video_source"]+"/"+self.embedding_data[image]["img_name"]) for image in self.embedding_data]
+        all_embeddings = self.facenet.embeddings(image_list)
+        for face_nr in self.embedding_data:
+            self.embedding_data[face_nr]["embedding"] = all_embeddings[face_nr]
+        return self.embedding_data
 
     def get_classes(self):
-        video_faces_path = "result/" + "GX010273/"
-        file_list = ["result/" + "GX010273/" + file_name for file_name in os.listdir(video_faces_path)]
-        embeddings = self.get_embeddings(file_list)
-        all_distances = []
-        for face1 in range(len(embeddings)):
-            distances = []
-            for face2 in range(len(embeddings)):
-                distances.append(np.linalg.norm(embeddings[face1]-embeddings[face2]))
-            all_distances.append(distances)
-        print(tabulate(all_distances,headers = os.listdir(video_faces_path)))
+        self.get_embeddings()
+        print(self.calculate_WSS())
 
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-
-        embeddings = np.array(embeddings[:100])
-        x, y, z = embeddings[:, 0], embeddings[:, 1], embeddings[:, 2]
-        ax.scatter(x, y, z)
-
-        plt.show()
+    # function returns WSS score for k values from 1 to kmax
+    def calculate_WSS(self):
+        X = [self.embedding_data[embed]["embedding"] for embed in self.embedding_data]
+        scores = {}
+        # Berechne den Silhouetten-Score für k-Werte zwischen 2 und 10
+        for k in range(2, len(self.embedding_data)):
+            kmeans = KMeans(n_clusters=k, random_state=42, n_init='auto')
+            kmeans.fit(X)
+            score = silhouette_score(X, kmeans.labels_)
+            scores[k]=score
+            print("Silhouette score for k=%d: %0.4f" % (k, score))
+        return list(scores.keys())[list(scores.values()).index(max(scores.values()))]
