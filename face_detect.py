@@ -62,32 +62,32 @@ class FaceDetection():
         cv2.line(self.current_frame, keypoints["mouth_left"], keypoints["mouth_right"], color=(0, 0, 255), thickness=1)
 
     def check_same_face(self,current_mtcnn_faces):
-        boxes_current_frame = [face["box"] for face in current_mtcnn_faces]
-        IoUs = []
-        '''print(boxes_current_frame)
+        '''IoUs = []
+        print(boxes_current_frame)
         print(self.recent_frame_faces)'''
         for recent_face in self.recent_frame_faces:
             removable = True
             p2, p3 = recent_face
-            for current_face in boxes_current_frame:
-                (p0,p1) = current_face
+            for current_face in current_mtcnn_faces:
+                (p0,p1) = current_mtcnn_faces[current_face]["box"]
                 IoU = self.overlapping_area(p0,p1, p2, p3, True)
                 if IoU is None:
                     break
-                IoUs.append(IoU)
+                #IoUs.append(IoU)
                 if IoU >= 0.6:
                     print("duplicate!")
-                    boxes_current_frame.remove(current_face)
+                    current_mtcnn_faces.pop(current_face)
                     removable = False
             if removable:
                 self.recent_frame_faces.remove(recent_face)
         '''print(boxes_current_frame)
         print(IoUs)'''
-        return boxes_current_frame
+        return current_mtcnn_faces
 
     def get_faces(self):
         frame_faces = {}
         self.recent_frame_faces = []
+
         mtcnn_faces =  [detected_face for detected_face in self.mtcnn_face_detector.detect_faces(self.current_frame) if detected_face["confidence"] >= 0.95]
         mtcnn_faces =  [detected_face for detected_face in mtcnn_faces if detected_face["box"][2]>= self.min_face_size and detected_face["box"][3]>= self.min_face_size]
         for face in mtcnn_faces:
@@ -98,7 +98,7 @@ class FaceDetection():
             return frame_faces
         retina_faces = self.retina_net_res_net.detect(self.current_frame).astype(int)
         for face in reduced_mtcnn_faces:
-            (p0,p1) = face
+            (p0,p1) = face["box"]
             for (x1, y1, x2, y2, score) in retina_faces:
                 x1 = max(x1, 0)
                 y1 = max(y1, 0)
@@ -116,11 +116,16 @@ class FaceDetection():
                     while (frame_faces.keys().__contains__(face_name)):
                         face_name += "0"
                     print("add face")
-                    frame_faces[face_name] = ((int(x1), int(y1)), (int(x2), int(y2)))
+                    frame_faces[face_name]["rect"] = ((int(x1), int(y1)), (int(x2), int(y2)))
+                    frame_faces[face_name]["keypoints"] = face["keypoints"]
         return frame_faces
+
+    def align_face(self):
+        pass
+
     def store_image(self, frame_faces):
         for face in frame_faces:
-            (x1, y1), (x2, y2) = frame_faces[face]
+            (x1, y1), (x2, y2) = frame_faces[face]["rect"]
             # Region of Interest
             roi = self.current_frame[y1:y2, x1:x2]
             cv2.imwrite("result/"+ self.video_name + "/" + face + ".jpg", roi)

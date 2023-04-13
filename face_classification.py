@@ -1,12 +1,9 @@
 import shutil
 
 import cv2
-import face_recognition
-from facenet.src.facenet import load_model
 from keras_facenet import FaceNet
 import numpy as np
 import os
-from sklearn.model_selection import GridSearchCV
 import sklearn.cluster as cl
 from sklearn.metrics import silhouette_score
 
@@ -16,57 +13,78 @@ class FaceClassification():
         self.facenet = FaceNet()
         self.embedding_data = {}
 
-    def preprocess_image(self ,image_path):
-        img = cv2.imread(image_path)
-        #skaliere auf 160x160
-        img = cv2.resize(img, (160, 160))
-        #normalisierung der pixelintensivität (zwischen 0 und 1)
-        img = img.astype("float") / 255.0
+    import numpy as np
+    import cv2
 
-        #bild in np-array (shape = (160, 160, 3))
-        img = np.array(img, dtype=np.float32)
+    def align_face(image):
+        # Wähle das Gesichtserkennungsmodell deiner Wahl (z.B. OpenCV Haar Cascade)
+        face_cascade = cv2.CascadeClassifier('path/to/haarcascade_frontalface_default.xml')
 
-        #hinzufügen von dimension (shape = (1, 160, 160, 3)) img[0] = Anzahl der Bilder
-        img = np.expand_dims(img, axis=0)
-        return img
+        # Wandle das Bild in Graustufen um, um die Gesichtserkennung zu erleichtern
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-    def get_embedding(self, img_path):
+        # Wende die Gesichtserkennung auf das Bild an
+        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5)
 
-        image = cv2.imread(img_path)
+        # Wenn kein Gesicht gefunden wurde, gib None zurück
+        if len(faces) == 0:
+            return None
 
-        # Variante 1: Gesamtbild-Embedding
-        #full_face_embedding = face_recognition.face_encodings(image)
+        # Wenn mehr als ein Gesicht gefunden wurde, wähle das größte
+        biggest_face = max(faces, key=lambda face: face[2] * face[3])
 
-        # Variante 2: Multi-Task Cascaded Convolutional Neural Network
-        mtcnn_face_embedding = face_recognition.face_encodings(image, model='small')
+        # Extrahiere die Koordinaten des größten Gesichts
+        x, y, w, h = biggest_face
 
-        # Variante 3: Deep Residual Network
-        #dlib_face_embedding = face_recognition.face_encodings(image, model='large')
+        # Schneide das größte Gesicht aus dem Bild aus
+        face = image[y:y + h, x:x + w]
 
-        #combined_embedding = np.hstack((full_face_embedding, mtcnn_face_embedding, dlib_face_embedding))
-        return mtcnn_face_embedding
+        # Wandle das ausgeschnittene Gesicht in Graustufen um
+        face_gray = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)
+
+        # Verwende einen Gesichtslandmark-Erkennungsalgorithmus, um die Gesichtslandmarks im Gesicht zu finden (z.B. dlib)
+        # Extrahiere die Koordinaten der Augen aus den Landmarks
+        left_eye = (0, 0)
+        right_eye = (0, 0)
+
+        # Berechne die Rotation, die erforderlich ist, um die Augen horizontal auszurichten
+        dy = right_eye[1] - left_eye[1]
+        dx = right_eye[0] - left_eye[0]
+        angle = np.degrees(np.arctan2(dy, dx))
+
+        # Berechne das Zentrum des Gesichts
+        center = (x + w // 2, y + h // 2)
+
+        # Erstelle die Transformationsmatrix, um das Gesicht um das Zentrum und den Winkel zu drehen
+        M = cv2.getRotationMatrix2D(center, angle, 1.0)
+
+        # Wende die Transformationsmatrix auf das Gesicht an
+        aligned_face = cv2.warpAffine(face, M, (w, h), flags=cv2.INTER_CUBIC)
+
+        return aligned_face
 
     def get_embeddings(self):
         count = 0
         for video_name in os.listdir("result"):
             if os.path.isdir("result/"+video_name):
                 for face_img in os.listdir("result/"+video_name):
-                    self.embedding_data[count] = {"img_name":face_img, "video_source":video_name, "img_data":cv2.imread("result/"+video_name+"/"+face_img), "path":"result/"+video_name+"/"+face_img}
+                    self.embedding_data[count] = {"img_name":face_img,
+                                                  "video_source":video_name,
+                                                  "img_data":cv2.imread("result/"+video_name+"/"+face_img),
+                                                  "path":"result/"+video_name+"/"+face_img}
                     count+=1
-        deleting_keys = []
-        for face_nr in self.embedding_data:
-            self.embedding_data[face_nr]["embedding"] = self.get_embedding(self.embedding_data[face_nr]["path"])
-            if np.array(self.embedding_data[face_nr]["embedding"]).shape[0] == 0:
-                deleting_keys.append(face_nr)
-        for key in deleting_keys:
-            self.embedding_data.pop(key)
+        img_list = [self.align_face(self.embedding_data[face_img]["img_data"]) for face_img in self.embedding_data]
+        embedding = self.facenet.embeddings(img_list)
+        for face_img_nr in range(len(self.embedding_data)):
+            self.embedding_data[list(self.embedding_data.keys())[face_img_nr]]["embedding"] = embedding[face_img_nr]
+
         return self.embedding_data
 
     def get_classes(self):
         self.get_embeddings()
         X = np.vstack([self.embedding_data[embed]["embedding"] for embed in self.embedding_data])
         # Erstelle das Dictionary der Hyperparameter-Werte
-        eps = [0.3,0.4,0.5, 0.6, 0.7,0.75, 0.79,0.8,0.9]
+        eps = [0.3,0.4,0.5, 0.6, 0.7,0.75, 0.79,0.8,0.85,0.9]
         for eps_ in eps:
             k = self.calculate_k(X, eps_)
             if not k.keys().__contains__("labels"):
@@ -82,7 +100,7 @@ class FaceClassification():
                 cv2.imwrite(save_dir+"/"+self.embedding_data[list(self.embedding_data.keys())[data_point]]["img_name"], self.embedding_data[list(self.embedding_data.keys())[data_point]]["img_data"])
 
 
-    # function returns WSS score for k values from 1 to kmax
+
     def calculate_k(self, X, eps):
         max_k = {"score": -1}
         # Berechne den Silhouetten-Score für k-Werte zwischen 2 und 10
@@ -92,11 +110,6 @@ class FaceClassification():
             cluster.fit(X)
 
             labels = cluster.fit_predict(X)
-
-            # Überprüfen, ob mindestens zwei Cluster gefunden wurden
-            n_clusters = len(set(labels))
-            if n_clusters < 2:
-                continue
 
             score = silhouette_score(X, cluster.labels_)
             if score >= max_k["score"]:
