@@ -1,5 +1,3 @@
-import shutil
-
 import cv2
 from keras_facenet import FaceNet
 import numpy as np
@@ -12,9 +10,6 @@ class FaceClassification():
     def __init__(self):
         self.facenet = FaceNet()
         self.embedding_data = {}
-
-    import numpy as np
-    import cv2
 
     def align_face(image):
         # Wähle das Gesichtserkennungsmodell deiner Wahl (z.B. OpenCV Haar Cascade)
