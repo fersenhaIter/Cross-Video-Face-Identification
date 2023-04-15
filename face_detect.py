@@ -115,46 +115,16 @@ class FaceDetection():
                     while (frame_faces.keys().__contains__(face_name)):
                         face_name += "0"
                     print("add face")
+                    frame_faces[face_name] = {}
                     frame_faces[face_name]["rect"] = ((int(x1), int(y1)), (int(x2), int(y2)))
                     frame_faces[face_name]["keypoints"] = face["keypoints"]
         return frame_faces
 
-    def align_face(self, face):
-        (x1, y1), (x2, y2) = face["rect"]
-        left_eye = face["keypoints"]["left_eye"]
-        right_eye = face["keypoints"]["right_eye"]
-        dY = right_eye[1] - left_eye[1]
-        dX = right_eye[0] - left_eye[0]
-        angle = np.degrees(np.arctan2(dY, dX))
-        #rotationmatrix
-        (h, w) = self.current_frame.shape[:2]
-        center = (w // 2, h // 2)
-        M = cv2.getRotationMatrix2D(center, angle, 1)
-        #new rect-points
-        rect_points = np.array([(x1, y1), (x2, y1), (x2, y2), (x1, y2)], dtype=np.float32)
-        rect_points = np.expand_dims(rect_points, axis=1)
-        rect_points = cv2.transform(rect_points, M)
-        rect_points = np.squeeze(rect_points, axis=1)
-
-        # check new bounding points
-        if np.any(rect_points < 0) or np.any(rect_points[:, 0] > self.current_frame.shape[1]) or np.any(
-                rect_points[:, 1] > self.current_frame.shape[0]):
-            # adjust bounding points
-            rect_points[:, 0] = np.clip(rect_points[:, 0], 0, self.current_frame.shape[1])
-            rect_points[:, 1] = np.clip(rect_points[:, 1], 0, self.current_frame.shape[0])
-
-        # transform image through rotationmatrix
-        aligned_face = cv2.warpAffine(self.current_frame, M, (self.current_frame.shape[1], self.current_frame.shape[0]))
-
-        #new outcut
-        roi = aligned_face[rect_points[0][1]:rect_points[2][1],rect_points[0][0]:rect_points[1][0]]
-
-        return roi
-
     def store_image(self, frame_faces):
         for face in frame_faces:
+            (x1, y1), (x2, y2) = frame_faces[face]["rect"]
             # Region of Interest
-            roi = self.align_face(face)
+            roi = self.current_frame[y1:y2, x1:x2]
             cv2.imwrite("result/"+ self.video_name + "/" + face + ".jpg", roi)
 
     def check_frame_similarity(self,next_frame):

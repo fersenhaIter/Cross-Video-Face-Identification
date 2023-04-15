@@ -1,8 +1,6 @@
 import face_detect
 import face_classification
 import os
-from scipy.spatial import distance
-import numpy as np
 
 
 class CamAnalysis:
@@ -18,6 +16,8 @@ class CamAnalysis:
 
     def run_data_preparation(self, directory):
         print(directory)
+        if not os.path.isdir("result"):
+            os.mkdir("result")
         for file in os.listdir(directory):
             dir = directory + "/" + file
             if os.path.isdir(dir):
