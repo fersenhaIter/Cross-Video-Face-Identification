@@ -18,10 +18,11 @@ class FaceClassification():
                     try:
                         img_data = cv2.imread("result/" + video_name + "/" + face_img)
                         img_data = cv2.resize(img_data, (160,160))
+                        img_path = "result/" + video_name + "/" + face_img
                         self.embedding_data[count] = {"img_name": face_img,
                                                       "video_source": video_name,
                                                       "img_data": img_data,
-                                                      "path": "result/" + video_name + "/" + face_img}
+                                                      "path": img_path}
                         count += 1
                     except cv2.error as e:
                         print("Invalid frame!")
@@ -35,39 +36,42 @@ class FaceClassification():
         self.get_embeddings()
         X = [self.embedding_data[face]["embedding"] for face in self.embedding_data]
         # Erstelle das Dictionary der Hyperparameter-Werte
-        eps_ = 0.6
-        k = self.calculate_k(X, eps = eps_)
-        labels = k["labels"]
-        labels_to_img = {}
-        for data_point in range(len(labels)):
-            if not list(labels_to_img.keys()).__contains__(labels[data_point]):
-                labels_to_img[labels[data_point]] = []
-            labels_to_img[labels[data_point]].append(self.embedding_data[data_point])
+        epsilon = [.5, .6, .7, .8, .9]
+        for eps_ in epsilon:
+            k = self.calculate_k(X, eps = eps_)
+            if not k.keys().__contains__("labels"):
+                break
+            labels = k["labels"]
+            labels_to_img = {}
+            for data_point in range(len(labels)):
+                if not list(labels_to_img.keys()).__contains__(labels[data_point]):
+                    labels_to_img[labels[data_point]] = []
+                labels_to_img[labels[data_point]].append(self.embedding_data[data_point])
 
-        if not os.path.isdir("result/clustered" + "EPS" + str(eps_)):
-            os.mkdir("result/clustered" + "EPS" + str(eps_))
+            if not os.path.isdir("result/clustered" + "EPS" + str(eps_)):
+                os.mkdir("result/clustered" + "EPS" + str(eps_))
 
-        for label in labels_to_img:
-            different_sources = False
-            save_dir = "result/clustered" + "EPS" + str(eps_) + "/" + str(label)
-            if not os.path.isdir(save_dir):
-                os.mkdir(save_dir)
-            f =  open(save_dir+"/"+"info.txt", "x")
-            f.close()
-            f =  open(save_dir+"/"+"info.txt", "a")
-            first_source = labels_to_img[label][0]["video_source"]
-            for img in labels_to_img[label]:
-                cv2.imwrite(save_dir + "/" + img["img_name"],img["img_data"])
-                f.write(img["img_name"]+"       video : "+img["video_source"]+"     timestamp : "+img["img_name"].rsplit('.', 1)[0]+" sec\n")
-                if img["video_source"] is not first_source:
-                    different_sources = True
-            f.close()
-            if different_sources:
-                f = open("result/multiple_sources.txt","w")
+            for label in labels_to_img:
+                different_sources = False
+                save_dir = "result/clustered" + "EPS" + str(eps_) + "/" + str(label)
+                if not os.path.isdir(save_dir):
+                    os.mkdir(save_dir)
+                f =  open(save_dir+"/"+"info.txt", "x")
                 f.close()
-                f = open("result/multiple_sources.txt","a")
-                f.write("face label nr.:"+str(label)+"\n")
+                f =  open(save_dir+"/"+"info.txt", "a")
+                first_source = labels_to_img[label][0]["video_source"]
+                for img in labels_to_img[label]:
+                    cv2.imwrite(save_dir + "/" + img["img_name"],img["img_data"])
+                    f.write(img["img_name"]+"       video : "+img["video_source"]+"     timestamp : "+img["img_name"].rsplit('.', 1)[0]+" sec\n")
+                    if img["video_source"] is not first_source:
+                        different_sources = True
                 f.close()
+                if different_sources:
+                    f = open("result/multiple_sources_"+str(eps_)+"_.txt","w")
+                    f.close()
+                    f = open("result/multiple_sources.txt","a")
+                    f.write("face label nr.:"+str(label)+"\n")
+                    f.close()
     def calculate_k(self, X, eps):
         max_k = {"score": -1}
         # Berechne den Silhouetten-Score für k-Werte zwischen 2 und 10

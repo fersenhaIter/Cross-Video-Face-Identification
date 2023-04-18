@@ -1,5 +1,4 @@
 import os.path
-
 import cv2
 import face_detection
 from datetime import datetime
