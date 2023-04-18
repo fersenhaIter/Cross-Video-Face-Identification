@@ -2,13 +2,30 @@ import cv2
 from keras_facenet import FaceNet
 import os
 import sklearn.cluster as cl
+from numpy import asarray, expand_dims
 from sklearn.metrics import silhouette_score
+from keras_vggface.vggface import VGGFace
+from keras_vggface.utils import preprocess_input
+model = VGGFace(model='senet50', include_top=True, input_shape=(224, 224, 3), pooling='max')
 
 class FaceClassification():
 
     def __init__(self):
         self.facenet = FaceNet()
         self.embedding_data = {}
+
+    # extract faces and calculate face embeddings for a list of photo files
+    def get_embedding(self, img):
+        # extract faces
+        img = cv2.resize(img,(224,224))
+        img = asarray(img, 'float32')
+        img = expand_dims(img, axis=0)
+        # prepare the face for the model, e.g. center pixels
+
+        img = preprocess_input(img, version=2)
+        # perform prediction
+        yhat = model.predict(img, verbose=False)
+        return yhat
 
     def get_embeddings(self):
         count = 0
@@ -17,12 +34,12 @@ class FaceClassification():
                 for face_img in os.listdir("result/" + video_name):
                     try:
                         img_data = cv2.imread("result/" + video_name + "/" + face_img)
-                        img_data = cv2.resize(img_data, (160,160))
                         img_path = "result/" + video_name + "/" + face_img
                         self.embedding_data[count] = {"img_name": face_img,
                                                       "video_source": video_name,
                                                       "img_data": img_data,
-                                                      "path": img_path}
+                                                      "path": img_path,
+                                                      "embeddings":self.get_embedding(img_data)}
                         count += 1
                     except cv2.error as e:
                         print("Invalid frame!")
