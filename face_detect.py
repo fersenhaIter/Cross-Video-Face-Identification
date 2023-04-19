@@ -5,6 +5,9 @@ from datetime import datetime
 import numpy as np
 from mtcnn import MTCNN
 
+# TODO: single .jpg
+# TODO: case same video name
+
 class FaceDetection():
 
     def __init__(self,min_face_size = 40, scan_frame_rate = 3, video_name = "video.mp4"):
