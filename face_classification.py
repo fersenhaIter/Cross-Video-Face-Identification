@@ -15,6 +15,8 @@ model = VGGFace(model='senet50', include_top=True, input_shape=(224, 224, 3))
 model1 = DeepFace.build_model('DeepID')
 model2 = DeepFace.build_model('DeepFace')
 model3 = DeepFace.build_model('OpenFace')
+model4 = DeepFace.build_model('VGG-Face')
+model5 = DeepFace.build_model('Facenet')
 
 class FaceClassification():
 
@@ -29,27 +31,19 @@ class FaceClassification():
         img = preprocess_input(img, version=2)
         return img
     # extract faces and calculate face embeddings for a list of photo files
-    def get_vgg_embedding(self, img):
-        embedding_DeepID = model1.predict(self.preprocess_img(img, (47, 55)), verbose=False)
-        embedding_DeepID = embedding_DeepID / np.linalg.norm(np.array(embedding_DeepID).flatten(), axis=0,keepdims=True)
+    def get_some_embeddings(self, img):
+        multiple_way_embed = None
+        shape_list = [(224, 224),(47, 55), (152, 152),(96, 96), (224, 224), (160, 160)]
+        model_list = [model, model1, model2, model3, model4, model5]
+        for model_no in range(len(model_list)):
+            embedding = model_list[model_no].predict(self.preprocess_img(img, shape_list[model_no]), verbose=False)
+            embedding = embedding / np.linalg.norm(np.array(embedding).flatten(), axis=0,keepdims=True)
+            if model_no == 0:
+                multiple_way_embed = embedding
+            else:
+                multiple_way_embed = np.concatenate((multiple_way_embed,embedding), axis=1)
 
-        embedding_DeepFace = model2.predict(self.preprocess_img(img, (152, 152)), verbose=False)
-        embedding_DeepFace = embedding_DeepFace / np.linalg.norm(np.array(embedding_DeepFace).flatten(), axis=0,keepdims=True)
-
-        embedding_OpenFace = model3.predict(self.preprocess_img(img, (96, 96)), verbose=False)
-        embedding_OpenFace = embedding_OpenFace / np.linalg.norm(np.array(embedding_OpenFace).flatten(), axis=0,keepdims=True)
-
-        three_way_embed = np.concatenate((embedding_DeepFace,embedding_OpenFace,embedding_DeepID), axis=1)
-
-
-        return three_way_embed
-
-    def get_deepface_embedding(self, img):
-        img = cv2.resize(img,(47, 55))
-        img = asarray(img, 'float32')
-        img = expand_dims(img, axis=0)
-        embedding = model1.predict(img,verbose=False)
-        return embedding
+        return multiple_way_embed
 
     def get_embeddings(self):
         count = 0
@@ -59,17 +53,14 @@ class FaceClassification():
                     try:
                         img_data = cv2.imread("result/" + video_name + "/" + face_img)
                         img_path = "result/" + video_name + "/" + face_img
-                        embedding1 = self.get_vgg_embedding(img_data)
-                        embedding2 = self.get_deepface_embedding(img_data)
-                        if embedding1 is not None and embedding2 is not None:
-                            embedding1 = np.array(embedding1).flatten() / np.linalg.norm(np.array(embedding1).flatten(), axis=0, keepdims=True)
-                            embedding2 = np.array(embedding2).flatten() / np.linalg.norm(np.array(embedding2).flatten(), axis=0, keepdims=True)
-                            self.embedding_data[count] = {"img_name": face_img,
-                                                          "video_source": video_name,
-                                                          "img_data": cv2.resize(img_data, (160,160)),
-                                                          "path": img_path,
-                                                          "embedding":np.concatenate((embedding1,embedding2))}
-                            count += 1
+                        embedding = self.get_some_embeddings(img_data)
+                        embedding = np.array(embedding).flatten() / np.linalg.norm(np.array(embedding).flatten(), axis=0, keepdims=True)
+                        self.embedding_data[count] = {"img_name": face_img,
+                                                      "video_source": video_name,
+                                                      "img_data": cv2.resize(img_data, (160,160)),
+                                                      "path": img_path,
+                                                      "embedding":embedding}
+                        count += 1
                     except cv2.error:
                         print("Invalid frame!")
         img_data_list = [self.embedding_data[img]["img_data"] for img in self.embedding_data]
