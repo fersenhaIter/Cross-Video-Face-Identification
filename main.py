@@ -39,4 +39,4 @@ class CamAnalysis:
 
 cam_analysis = CamAnalysis()
 #cam_analysis.run_data_preparation("C:/Users/jakob/Downloads/gkd_4jakob_2023-03-30_1342/4jakob")
-cam_analysis.face_classification.get_classes()
+cam_analysis.face_classification.st()

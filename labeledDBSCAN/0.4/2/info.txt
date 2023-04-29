@@ -1,0 +1,12 @@
+219.0.jpg       video : 20220802_174715     timestamp : 219.0 sec
+219.41.jpg       video : 20220802_174715     timestamp : 219.41 sec
+219.72.jpg       video : 20220802_174715     timestamp : 219.72 sec
+219.83.jpg       video : 20220802_174715     timestamp : 219.83 sec
+219.93.jpg       video : 20220802_174715     timestamp : 219.93 sec
+220.03.jpg       video : 20220802_174715     timestamp : 220.03 sec
+220.24.jpg       video : 20220802_174715     timestamp : 220.24 sec
+220.66.jpg       video : 20220802_174715     timestamp : 220.66 sec
+220.76.jpg       video : 20220802_174715     timestamp : 220.76 sec
+220.86.jpg       video : 20220802_174715     timestamp : 220.86 sec
+221.07.jpg       video : 20220802_174715     timestamp : 221.07 sec
+221.28.jpg       video : 20220802_174715     timestamp : 221.28 sec

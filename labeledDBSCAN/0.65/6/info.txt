@@ -1,0 +1,9 @@
+10.14.jpg       video : 20220802_174715     timestamp : 10.14 sec
+232.03.jpg       video : 20220802_174715     timestamp : 232.03 sec
+232.45.jpg       video : 20220802_174715     timestamp : 232.45 sec
+232.86.jpg       video : 20220802_174715     timestamp : 232.86 sec
+233.28.jpg       video : 20220802_174715     timestamp : 233.28 sec
+233.69.jpg       video : 20220802_174715     timestamp : 233.69 sec
+8.48.jpg       video : 20220802_174715     timestamp : 8.48 sec
+9.31.jpg       video : 20220802_174715     timestamp : 9.31 sec
+9.72.jpg       video : 20220802_174715     timestamp : 9.72 sec

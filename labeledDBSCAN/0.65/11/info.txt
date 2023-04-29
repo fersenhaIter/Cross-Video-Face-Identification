@@ -1,0 +1,16 @@
+111.93.jpg       video : 20220804_103852     timestamp : 111.93 sec
+112.34.jpg       video : 20220804_103852     timestamp : 112.34 sec
+133.45.jpg       video : 20220804_103852     timestamp : 133.45 sec
+143.79.jpg       video : 20220804_103852     timestamp : 143.79 sec
+145.45.jpg       video : 20220804_103852     timestamp : 145.45 sec
+162.0.jpg       video : 20220804_103852     timestamp : 162.0 sec
+171.52.jpg       video : 20220804_103852     timestamp : 171.52 sec
+176.07.jpg       video : 20220804_103852     timestamp : 176.07 sec
+46.86.jpg       video : 20220804_103852     timestamp : 46.86 sec
+60.72.jpg       video : 20220804_103852     timestamp : 60.72 sec
+60.93.jpg       video : 20220804_103852     timestamp : 60.93 sec
+64.76.jpg       video : 20220804_103852     timestamp : 64.76 sec
+64.86.jpg       video : 20220804_103852     timestamp : 64.86 sec
+67.24.jpg       video : 20220804_103852     timestamp : 67.24 sec
+85.0.jpg       video : 20220804_103852     timestamp : 85.0 sec
+92.86.jpg       video : 20220804_103852     timestamp : 92.86 sec

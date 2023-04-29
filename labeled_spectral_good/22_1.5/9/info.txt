@@ -1,0 +1,9 @@
+66.41.jpg       video : GX010321     timestamp : 66.41 sec
+66.52.jpg       video : GX010321     timestamp : 66.52 sec
+66.93.jpg       video : GX010321     timestamp : 66.93 sec
+67.03.jpg       video : GX010321     timestamp : 67.03 sec
+67.14.jpg       video : GX010321     timestamp : 67.14 sec
+67.24.jpg       video : GX010321     timestamp : 67.24 sec
+67.34.jpg       video : GX010321     timestamp : 67.34 sec
+67.66.jpg       video : GX010321     timestamp : 67.66 sec
+70.14.jpg       video : GX010321     timestamp : 70.14 sec

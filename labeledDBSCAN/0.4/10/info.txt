@@ -1,0 +1,7 @@
+121.45.jpg       video : GX010273     timestamp : 121.45 sec
+121.55.jpg       video : GX010273     timestamp : 121.55 sec
+121.66.jpg       video : GX010273     timestamp : 121.66 sec
+121.76.jpg       video : GX010273     timestamp : 121.76 sec
+121.86.jpg       video : GX010273     timestamp : 121.86 sec
+121.97.jpg       video : GX010273     timestamp : 121.97 sec
+122.07.jpg       video : GX010273     timestamp : 122.07 sec
