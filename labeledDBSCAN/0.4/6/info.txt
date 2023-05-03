@@ -1,6 +1,0 @@
-195.83.jpg       video : 20220804_103852     timestamp : 195.83 sec
-195.93.jpg       video : 20220804_103852     timestamp : 195.93 sec
-196.03.jpg       video : 20220804_103852     timestamp : 196.03 sec
-196.14.jpg       video : 20220804_103852     timestamp : 196.14 sec
-196.24.jpg       video : 20220804_103852     timestamp : 196.24 sec
-196.34.jpg       video : 20220804_103852     timestamp : 196.34 sec

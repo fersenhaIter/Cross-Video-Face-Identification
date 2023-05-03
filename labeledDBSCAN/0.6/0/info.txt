@@ -1,7 +1,0 @@
-1.66.jpg       video : 20220428_131021     timestamp : 1.66 sec
-2.17.jpg       video : 20220428_131021     timestamp : 2.17 sec
-47.48.jpg       video : 20220428_131159     timestamp : 47.48 sec
-47.59.jpg       video : 20220428_131159     timestamp : 47.59 sec
-47.9.jpg       video : 20220428_131159     timestamp : 47.9 sec
-48.1.jpg       video : 20220428_131159     timestamp : 48.1 sec
-48.21.jpg       video : 20220428_131159     timestamp : 48.21 sec

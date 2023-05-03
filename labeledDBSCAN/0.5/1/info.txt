@@ -1,5 +1,0 @@
-127.55.jpg       video : 20220802_174715     timestamp : 127.55 sec
-127.76.jpg       video : 20220802_174715     timestamp : 127.76 sec
-127.86.jpg       video : 20220802_174715     timestamp : 127.86 sec
-127.97.jpg       video : 20220802_174715     timestamp : 127.97 sec
-129.21.jpg       video : 20220802_174715     timestamp : 129.21 sec
