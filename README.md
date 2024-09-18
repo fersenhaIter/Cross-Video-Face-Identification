@@ -1,5 +1,7 @@
 # Video Face Detection for Cross-Video Person Identification
 
+<img src="cover_.jpg" alt="Project Cover" align="right" width="250" style="border: 2px solid black;"/>
+
 This project processes video footage to detect faces, generate embeddings, and attempt to identify recurring individuals across multiple videos. Originally designed for war journalism, particularly during evacuations and rescue missions, the system helps identify the same individuals in different videos. The system is currently not fully operational and faces challenges with efficiency and performance.
 
 ## Features
