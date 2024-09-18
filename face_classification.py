@@ -1,60 +1,42 @@
+import time
+
 import cv2
 import numpy as np
 import json
-import torch
-from deepface import DeepFace
-from sklearn.cluster import SpectralClustering, DBSCAN
+from sklearn.cluster import SpectralClustering, DBSCAN, KMeans
+from sklearn.mixture import GaussianMixture
 from sklearn.preprocessing import normalize
 from sklearn.metrics import silhouette_score, calinski_harabasz_score
 import os
 from numpy import asarray, expand_dims
 from keras_vggface.utils import preprocess_input
-from facenet_pytorch import InceptionResnetV1
 from keras_facenet import FaceNet
-
-facenet_vggface2_model = InceptionResnetV1(pretrained='vggface2').eval()
-models = [[DeepFace.build_model('DeepFace'),(152, 152)],
-          [DeepFace.build_model('OpenFace'),(96, 96)],
-          [DeepFace.build_model('VGG-Face'),(224, 224)],
-          [DeepFace.build_model('ArcFace'),(112, 112)]]
+import face_recognition
+import dlib
 
 class FaceClassification():
 
     def __init__(self):
         self.facenet = FaceNet()
+        self.face_recognition = face_recognition
         self.embedding_data = {}
 
-
-    def preprocess_img(self,img, shape):
-        img = cv2.resize(img,shape)
+    def preprocess_img(self,img, shape = None):
+        if shape is not None:
+            img = cv2.resize(img,shape)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = asarray(img, 'float32')
         img = expand_dims(img, axis=0)
         img = preprocess_input(img, version=2)
         return img
-    # extract faces and calculate face embeddings for a list of photo files
-    def get_some_embeddings(self, img):
-        face = cv2.resize(img, (224, 224))
-        face = np.expand_dims(face, axis=0)
-        face = face.astype('float32')
-        face /= 255.0
-        face_net_embedding = facenet_vggface2_model(torch.from_numpy(face.transpose((0, 3, 1, 2)))).detach().numpy()
-        face_net_embedding = face_net_embedding / np.linalg.norm(face_net_embedding.flatten(), axis=0,keepdims=True)
-
-        multiple_way_embed = face_net_embedding
-
-        for model_no in range(len(models)):
-            model, shape = models[model_no]
-            embedding = model.predict(self.preprocess_img(img, shape), verbose=False)
-            embedding = embedding / np.linalg.norm(np.array(embedding).flatten(), axis=0,keepdims=True)
-            multiple_way_embed = np.concatenate((multiple_way_embed,embedding), axis=1)
-        return multiple_way_embed
 
     def get_embeddings(self):
         if os.path.exists("data.json"):
             print("load data...")
             stored_data = json.load(open("data.json", "r"))
             for face in stored_data:
-                stored_data[face]["embedding"] = normalize(np.load("result/embeddings/"+str(face)+".npy").reshape(-1, 1),axis=0)
+                embedding = np.load("result/embeddings/"+str(face)+".npy")
+                stored_data[face]["embedding"] = embedding
             self.embedding_data = stored_data
             print("data loaded!")
 
@@ -71,60 +53,96 @@ class FaceClassification():
                         img_path = "result/" + video_name + "/" + face_img
                         img_data = cv2.imread(img_path)
                         if img_data.size == 0:
-                            break
-                        img_path = "result/" + video_name + "/" + face_img
-                        embedding = self.get_some_embeddings(img_data)
-                        embedding = np.array(embedding).flatten() / np.linalg.norm(np.array(embedding).flatten(), axis=0, keepdims=True)
-
-                        self.embedding_data[str(count)] = {"img_name": face_img,
-                                                      "video_source": video_name,
-                                                      "path": img_path,
-                                                      "embedding":embedding}
-                        temp_embedding_data[str(count)] = {"img_name": face_img,
-                                                           "video_source": video_name,
-                                                           "path": img_path}
-                        count += 1
+                            continue
+                        height, width, _ = img_data.shape
+                        embedding_ = np.array(self.face_recognition.face_encodings(img_data,model="large", num_jitters=1,known_face_locations=[(0,width,height,0)]))
+                        if  embedding_.shape[0] != 0:
+                            embedding_facenet = np.array(self.facenet.embeddings([img_data]))
+                            embedding_ = embedding_.squeeze(axis=0)
+                            embedding_facenet = embedding_facenet.squeeze(axis=0)
+                            embedding = np.concatenate((embedding_,embedding_facenet),axis=0)
+                            np.save("result/embeddings/" + str(count) + ".npy", embedding)
+                            img_path = "result/" + video_name + "/" + face_img
+                            self.embedding_data[str(count)] = {"img_name": face_img,
+                                                               "video_source": video_name,
+                                                               "path": img_path,
+                                                               "img_data":img_data,
+                                                               "embedding":embedding}
+                            temp_embedding_data[str(count)] = {"img_name": face_img,
+                                                               "video_source": video_name,
+                                                               "path": img_path}
+                            count += 1
+                        else:
+                            print("f")
             json.dump(temp_embedding_data, open("data.json", "w"))
-            img_data_list = [cv2.resize(cv2.imread(self.embedding_data[img]["path"]), (160,160)) for img in self.embedding_data]
-            embeddings = self.facenet.embeddings(img_data_list)
-            for embed in range(len(embeddings)):
-                embedding1 = np.array(embeddings[embed])
-                embedding1 = embedding1/ np.linalg.norm(embedding1, axis=0, keepdims=True)
-                embedding = normalize(np.concatenate((embedding1, self.embedding_data[str(embed)]["embedding"])).reshape(-1,1),axis=0)
-                self.embedding_data[str(embed)]["embedding"] = embedding
-                np.save("result/embeddings/"+str(embed)+".npy", embedding)
             print("embedding data calculated and stored!")
 
-        return self.embedding_data
+    def get_dlib_embed(self,img_data):
+        height, width, _ = img_data.shape
+        dlib_embedding = np.array(self.face_recognition.face_encodings(img_data, model="large", num_jitters=1,
+                                                                       known_face_locations=[(0, width, height, 0)]))
+        dlib_embedding = dlib_embedding.squeeze(axis=0)
+        return dlib_embedding
+    def get_facenet_embed(self, img_data):
+        facenet_embedding = np.array(self.facenet.embeddings([img_data]))
+        facenet_embedding = facenet_embedding.squeeze(axis=0)
+        return facenet_embedding
+    def get_single_embedding(self, img_path):
+        img_data = cv2.imread(img_path)
+        if not img_data.size == 0:
+            dlib_embedding = self.get_dlib_embed(img_data)
+            if dlib_embedding.shape[0] != 0:
+                facenet_embedding = self.get_facenet_embed(img_data)
+                embedding = np.concatenate((dlib_embedding, facenet_embedding), axis=0)
+                return embedding
+    def get_video_distribution(self,face_dict):
+
 
     def all_label(self,X):
         max_k = {}
-        n_list = range(18,23)
-        gamma = [.4,.5,.6,.75,1,1.25,1.5,2]
-        eps_ = [.5,.6,.65,.67,.69,.7,.72,.8,.9,1,1.1,1.2]
-        for g in eps_:
-            #for n in n_list:
-            #clust = SpectralClustering(n_clusters=n, affinity='rbf', assign_labels='kmeans', eigen_solver="lobpcg", gamma=g, n_init=200)
-            clust = DBSCAN(eps=g)
-            clusters = clust.fit_predict(X)
-            unique_len = len(np.unique(clusters))
+        gamma = [.6,.65,.675,.75,.77,.8]
+        eps_ = [.75,.775,.79,.8,.825,.85,.9]
+        n_list = [len(np.unique(np.array(DBSCAN(eps=e).fit_predict(X))))-1 for e in eps_]
+        for n in n_list:
+            for eps in eps_:
+                for g in gamma:
+                    clust_spectral = SpectralClustering(n_clusters=n, affinity='rbf', assign_labels='kmeans', eigen_solver="lobpcg", gamma=g, n_init=200).fit_predict(X)
+                    clust_dbscan = DBSCAN(eps=eps).fit_predict(X)
 
-            if not (unique_len < 2 or unique_len > len(X)-1):
-                #scoring
-                silhouette_avg = silhouette_score(X, clusters)
-                ch_score = calinski_harabasz_score(X, clusters)
-                score = silhouette_avg * ch_score
+                    # Kombiniere die Ergebnisse der drei Clustering-Methoden
+                    final_labels = np.zeros(len(X))
+                    for i in range(len(X)):
+                        if clust_dbscan[i] != -1:
+                            final_labels[i] = clust_dbscan[i]
+                        else:
+                            final_labels[i] = clust_spectral[i] + np.max(clust_dbscan) + 1
 
-                print(g,silhouette_avg,ch_score,score,unique_len)
-                max_k[str(g)] = clusters
+                    # Führe abschließend Clustering mit GMM durch
+                    gmm = GaussianMixture(n_components=len(np.unique(final_labels)), covariance_type='full')
+                    clusters = gmm.fit_predict(X)
+
+                    #clusters = clust_dbscan
+
+                    unique_len = len(np.unique(clusters))
+
+                    if not (unique_len < 2 or unique_len > len(X)-1):
+                        #scoring
+                        silhouette_avg = silhouette_score(X, clusters)
+                        ch_score = calinski_harabasz_score(X, clusters)
+                        score = silhouette_avg * ch_score
+
+                        print(eps, silhouette_avg,ch_score,score,unique_len)
+                        max_k[str(eps)] = clusters
         return max_k
+
+
+    def single_video_mass(self):
+
 
     def st(self):
         self.get_embeddings()
         X = np.array([self.embedding_data[face]["embedding"] for face in self.embedding_data])
-        X = X.reshape(X.shape[0], -1)
-        # X = StandardScaler().fit_transform(X)
-        # Erstelle das Dictionary der Hyperparameter-Werte
+        print(X.shape)
         label_dict = self.all_label(X)
         out_saving_path = "result/labeled/"
         if not os.path.isdir(out_saving_path):
@@ -152,9 +170,9 @@ class FaceClassification():
                 first_source = labels_to_img[label][0]["video_source"]
 
                 for face in labels_to_img[label]:
-                    cv2.imwrite(save_dir + face["img_name"], cv2.imread(face["path"]))
-                    f.write(face["img_name"] + "       video : " + face["video_source"] + "     timestamp : " +
-                            face["img_name"].rsplit('.', 1)[0] + " sec\n")
+                    image = cv2.imread(face["path"])
+                    cv2.imwrite(save_dir + face["img_name"], image)
+                    f.write(face["img_name"] + "       video : " + face["video_source"] + "     timestamp : " + face["img_name"].rsplit('.', 1)[0] + " sec\n")
                 f.close()
 
 
