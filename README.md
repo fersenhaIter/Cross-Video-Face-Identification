@@ -1,48 +1,49 @@
-# Video Face Detection for Cross-Video Person Identification
+# Cross-Video Face Identification
 
 <img src="cover_.jpg" alt="Project Cover" align="right" style="width: 200px; border: 2px solid black; margin-left: 20px; float: right;"/>
 
-This project processes video footage to detect faces, generate embeddings, and attempt to identify recurring individuals across multiple videos. Originally designed for war journalism, particularly during evacuations and rescue missions, the system helps identify the same individuals in different videos. Through recent optimizations, frame selection and face recognition performance have been improved, and a combination of embedding models and clustering techniques are now used to increase accuracy.
+## Overview
 
-## Features
+This project processes video footage to detect faces, generate embeddings, and identify recurring individuals across multiple videos. Originally designed for war journalism and evacuations, it has been optimized for accuracy and performance. The system allows users to customize video directories, creating individual folders for each detected face, along with logs that track where each face appears across different videos. By using multiple face detection and embedding models, the system ensures higher precision and performance.
 
-- **Optimized Frame Selection**: The system intelligently selects frames to avoid redundant processing based on motion detection (optical flow) and brightness analysis, improving efficiency while preserving critical data.
-- **Face Detection**: Extracts faces from video frames using models such as MTCNN and RetinaFace.
-- **Combined Face Embeddings**: Generates face embeddings using multiple models (e.g., VGG-Face, ArcFace, OpenFace, FaceNet) to create a robust high-dimensional representation of faces.
-- **Cross-video Matching with Hybrid Clustering**: Utilizes a combination of clustering algorithms like Spectral Clustering, DBSCAN, and Gaussian Mixture Models (GMM) to group and match similar faces across different videos.
-- **Metadata Storage**: Detected face images are saved in a structured directory, with corresponding metadata (video source, timestamp, image path) logged in a JSON file.
+## Key Features
 
-## Frame Selection Optimization
+### Optimized Frame Selection
+The system applies advanced techniques to avoid redundant frame processing, boosting both accuracy and efficiency:
+1. **Motion Detection**: Frames are skipped if minimal motion is detected using **optical flow** techniques. This ensures that the system only processes frames with significant motion changes, reducing unnecessary computations.
+2. **Brightness Analysis**: Low-light frames are filtered out by comparing brightness histograms. This ensures that the system avoids processing frames that are too dark to provide useful data.
 
-To increase efficiency, the program implements two primary strategies for selecting frames:
+*Reason for combination*: Combining motion detection and brightness analysis helps the system filter out both redundant frames and low-quality frames, significantly reducing the time spent processing frames that do not contribute meaningful data.
 
-1. **Motion-Based Frame Skipping**: Uses optical flow to detect significant motion between frames. Similar consecutive frames are skipped.
-2. **Brightness-Based Selection**: Analyzes brightness changes across frames, skipping those with little variation to avoid redundant processing in dimly lit scenes.
+### Face Detection
+Multiple face detection models are used in tandem to increase precision, making the system robust to variations in lighting, face angles, and occlusions:
+- **MTCNN** (Multi-task Cascaded Convolutional Networks): Effective for detecting facial landmarks and recognizing faces from multiple angles.
+- **RetinaFace**: Robust for detecting faces in low-light conditions and complex environments.
+- **SCRFD** (InsightFace): Lightweight and optimized for real-time detection, providing a balance of speed and accuracy.
 
-These techniques help reduce the processing of unnecessary or low-quality frames, optimizing overall performance while retaining essential data for face detection.
-
-## Face Embeddings and Clustering
+*Reason for combination*: By combining **MTCNN**'s landmark detection with **SCRFD**’s real-time performance, the system ensures precise face detection even in challenging environments while remaining computationally efficient.
 
 ### Face Embeddings
+Face embeddings are generated using multiple state-of-the-art models to ensure robust face recognition:
+- **ArcFace** (InsightFace): Provides highly accurate embeddings, especially for large datasets.
+- **FaceNet**: Known for generating compact embeddings with high recall, useful for diverse face datasets.
+- **VGG-Face**: Produces highly separable embeddings, which are especially useful when combined with other models.
+- **InceptionResnetV1**: Reliable for generating embeddings for both frontal and side faces.
 
-Face embeddings are vector representations of faces in a high-dimensional space. The system uses multiple deep learning models to convert each detected face into an embedding, where similar faces will have closer embeddings in this space. To ensure robust recognition, several pre-trained models are used:
+*Reason for combination*: Using multiple models ensures that the system produces robust face embeddings across different scenarios. By normalizing and combining embeddings from multiple models, the system enhances accuracy and reduces the risk of false matches.
 
-- **VGG-Face**
-- **OpenFace**
-- **ArcFace**
-- **FaceNet**
+### Clustering and Matching
+To identify recurring faces across multiple videos, the project uses a hybrid clustering approach:
+- **DBSCAN**: Density-based clustering for filtering out noise and false positives, useful in large datasets with variable densities.
+- **KMeans**: A fast clustering algorithm that handles large datasets with predefined cluster numbers.
+- **Spectral Clustering**: Excellent for complex, graph-based partitioning of data.
+- **Agglomerative Clustering**: A hierarchical approach, ideal for nested or hierarchical relationships between faces.
 
-The embeddings from these models are normalized and combined to leverage their individual strengths, producing a more accurate representation of each face.
+*Reason for combination*: Each clustering algorithm has unique strengths. **DBSCAN** excels at filtering noise, while **KMeans** is useful for handling large datasets quickly. **Agglomerative Clustering** is suitable for creating hierarchical structures when faces appear in different contexts. Combining these methods ensures precise clustering of recurring faces across multiple videos.
 
-### Clustering Algorithms
-
-To match faces across different videos, the system clusters embeddings based on their proximity in the feature space. A combination of clustering methods improves the system’s accuracy in identifying recurring faces:
-
-1. **Spectral Clustering**: A graph-based algorithm that partitions data into clusters by analyzing eigenvalues of similarity matrices.
-2. **DBSCAN (Density-Based Spatial Clustering of Applications with Noise)**: A density-based algorithm that groups closely packed points and labels outliers as noise, ideal for filtering false positives.
-3. **Gaussian Mixture Model (GMM)**: A probabilistic model that assumes data points are generated from multiple Gaussian distributions, refining clusters and improving identification accuracy.
-
-By combining these algorithms, the system can accurately identify clusters of recurring faces across multiple videos, even in noisy or complex data.
+### Metadata and Logging
+- **Folder-based structure**: A separate folder is created for each detected face, storing all instances of that face across different videos.
+- **Metadata logs**: Each folder contains a log file that tracks where and when the face was detected in each video, aiding in the analysis of recurring individuals.
 
 ## Requirements
 
@@ -50,8 +51,8 @@ By combining these algorithms, the system can accurately identify clusters of re
 - OpenCV
 - NumPy
 - DeepFace
+- InsightFace
 - Scikit-learn
-- Keras (for VGG-Face preprocessing)
 - Facenet-PyTorch
 - Torch
 
@@ -61,10 +62,9 @@ pip install -r requirements.txt
 ```
 
 ## Installation
-
 1. Clone the repository:
    ```bash
-   git clone https://github.com/fersenhaIter/cam_analysis.git
+   git clone https://github.com/fersenhaIter/cross_video_identification.git
    ```
 2. Install dependencies:
    ```bash
@@ -73,23 +73,24 @@ pip install -r requirements.txt
 
 ## Usage
 
-1. Place your video files in a designated directory.
+1. Place your video files in the designated folder.
 2. Run the main script:
    ```bash
    python main.py
    ```
-3. Detected faces will be saved in the `result/` directory, and metadata is stored in `data.json`.
+3. The terminal interface allows you to input custom folder names. If folders don’t exist, the system will create them.
+4. Detected faces are saved in individual folders, and metadata logs are created for each face, containing information about where and when the face appears in different videos.
 
-## Program Structure
+## Current Issues and Next Steps
 
-- `main.py`: The core script that orchestrates the entire process.
-- `face_detect.py`: Detects faces from video frames using models like MTCNN and RetinaFace.
-- `face_classification.py`: Generates face embeddings using multiple models and clusters them to match individuals across videos.
-- `data.json`: Logs metadata for each detected face, including the image name, video source, and file path.
+1. **EXIF Data Extraction**: The current program relies on `exiftool`, but there have been compatibility issues. Consider replacing it with a Python-native library like **exifread** or **Pillow** for metadata extraction.
+2. **Face Matching Accuracy**: The combination of models is effective, but further tuning of hyperparameters, such as distance thresholds in clustering, will enhance accuracy.
+3. **Performance Optimization**: GPU acceleration (CUDA) should be implemented to speed up face embedding generation and clustering, especially for large datasets.
+4. **Improved User Interface**: The terminal UI could be enhanced using frameworks like **Rich** or **BeautifulTerminal** to provide better visualization and debugging options.
+5. **Real-time Processing**: Adding real-time processing support will allow for live face identification using models like SCRFD for faster results.
 
-## Future Improvements
+## Future Enhancements
 
-- Further optimize cross-video matching accuracy.
-- Introduce real-time video processing capabilities.
-- Leverage GPU acceleration for faster analysis.
-- Implement enhanced face tracking methods for better consistency.
+- **GPU Acceleration**: Implementing CUDA for large-scale video processing and real-time face detection.
+- **Web-based Interface**: Introducing a web-based user interface to make input and log viewing more user-friendly.
+- **Cloud Integration**: Support for cloud-based storage and distributed processing to handle larger datasets more efficiently.
