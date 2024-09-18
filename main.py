@@ -1,54 +1,50 @@
-import face_detect
-import face_classification
 import os
 
-class CamAnalysis:
-    def __init__(self):
-        self.face_detection = face_detect.FaceDetection()
-        self.face_classification = face_classification.FaceClassification()
-        self.data = {}
-        self.video_names = []
+# Set the environment variable to increase packet read attempts
+os.environ["OPENCV_FFMPEG_READ_ATTEMPTS"] = "10000"
 
-    def most_recent_frame(self, dir):
-        last_sec = max([float(face.rsplit('.', 1)[0]) for face in os.listdir(dir)])
-        return int(last_sec)
+import argparse
+import logging
+from colorama import init, Fore, Style
+from face_detect import FaceDetection
+from face_classification import FaceClassification
 
-    def run_data_preparation(self, directory):
-        print(directory)
-        if not os.path.isdir("result"):
-            os.mkdir("result")
+def setup_logging():
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[logging.StreamHandler()]
+    )
+    logger = logging.getLogger(__name__)
+    return logger
 
-        recent_videos = os.listdir("result")
-        if len(recent_videos) != 0:
-            last_video = max(recent_videos, key = lambda video: os.path.getmtime("result/"+video), default="")
-            recent_videos.remove(last_video)
+def main():
+    init(autoreset=True)  # Initialize colorama
+    print(Fore.GREEN + Style.BRIGHT + "Advanced Face Recognition and Classification System\n")
 
-        for file in os.listdir(directory):
-            dir = directory + "/" + file
-            if os.path.isdir(dir):
-                self.run_data_preparation(dir)
-            else:
-                filename = os.fsdecode(file)
-                name = filename.rsplit('.', 1)[0]
-                file_format = filename.rsplit('.', 1)[1]
+    parser = argparse.ArgumentParser(description="Advanced Face Recognition and Classification System")
+    parser.add_argument("--input", help="Input directory containing video files")
+    parser.add_argument("--output", help="Output directory for processed data")
+    args = parser.parse_args()
 
-                if name in recent_videos:
-                    print(f"skip: {name}")
-                    continue
+    input_dir = args.input if args.input else input("Enter the input directory containing video files (default: ./input_videos): ") or "./input_videos"
+    output_dir = args.output if args.output else input("Enter the output directory for processed data (default: ./output_faces): ") or "./output_faces"
 
-                if file_format in ["LRV","MP4","mp4"]:
-                    save_dir = "result/" + name
-                    self.video_names.append(name)
-                    print(filename)
-                    if(not os.path.isdir(save_dir)):
-                        os.mkdir(save_dir)
-                        self.face_detection.get_video_frame_faces(dir)
-                    elif(os.listdir(save_dir).__len__() != 0):
-                        most_recent_sec = self.most_recent_frame(save_dir)
-                        self.face_detection.get_video_frame_faces(dir, starting_point=most_recent_sec)
-                    else:
-                        self.face_detection.get_video_frame_faces(dir, starting_point=0)
+    if not os.path.isdir(input_dir):
+        print(Fore.RED + f"Error: Input directory '{input_dir}' does not exist.")
+        return
 
-cam_analysis = CamAnalysis()
-#cam_analysis.run_data_preparation("C:/Users/jakob/Downloads/gkd_4jakob_2023-03-30_1342")
-cam_analysis.face_classification.st()
+    logger = setup_logging()
+
+    face_detector = FaceDetection(logger)
+    face_detector.process_videos(input_dir)
+
+    face_classifier = FaceClassification(logger)
+    face_classifier.get_embeddings()
+    face_classifier.cluster_faces(output_dir)
+    face_classifier.generate_report(output_dir)
+
+    print(Fore.BLUE + Style.BRIGHT + f"\nProcessing complete. Results saved in {output_dir}")
+
+if __name__ == "__main__":
+    main()
