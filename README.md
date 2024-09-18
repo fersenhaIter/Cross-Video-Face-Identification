@@ -64,7 +64,7 @@ pip install -r requirements.txt
 
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/fersenhaIter/cam_analysis.git
    ```
 2. Install dependencies:
    ```bash
