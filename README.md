@@ -6,43 +6,43 @@ This project processes video footage to detect faces, generate embeddings, and a
 
 ## Features
 
-- **Optimized Frame Selection**: The system intelligently selects frames to avoid redundant processing based on motion detection (optical flow) and brightness checks, improving efficiency without losing critical information.
-- **Face detection**: The system extracts faces from video frames using models such as MTCNN and RetinaFace.
-- **Combined Face Embeddings**: The system generates face embeddings using multiple models (e.g., VGG-Face, ArcFace, OpenFace, FaceNet) to create a robust high-dimensional vector representation of faces.
-- **Cross-video Matching with Hybrid Clustering**: Uses a combination of clustering algorithms like Spectral Clustering, DBSCAN, and Gaussian Mixture Models (GMM) to identify and group similar faces across different videos.
-- **Metadata storage**: Detected face images are saved in an organized directory, and corresponding metadata (such as the video source, timestamp, and image path) is logged in a JSON file.
+- **Optimized Frame Selection**: The system intelligently selects frames to avoid redundant processing based on motion detection (optical flow) and brightness analysis, improving efficiency while preserving critical data.
+- **Face Detection**: Extracts faces from video frames using models such as MTCNN and RetinaFace.
+- **Combined Face Embeddings**: Generates face embeddings using multiple models (e.g., VGG-Face, ArcFace, OpenFace, FaceNet) to create a robust high-dimensional representation of faces.
+- **Cross-video Matching with Hybrid Clustering**: Utilizes a combination of clustering algorithms like Spectral Clustering, DBSCAN, and Gaussian Mixture Models (GMM) to group and match similar faces across different videos.
+- **Metadata Storage**: Detected face images are saved in a structured directory, with corresponding metadata (video source, timestamp, image path) logged in a JSON file.
 
 ## Frame Selection Optimization
 
-One major optimization is in how the program selects frames to process:
+To increase efficiency, the program implements two primary strategies for selecting frames:
 
-1. **Motion-Based Frame Skipping**: Uses optical flow to detect significant changes in motion between frames. If consecutive frames are too similar, they are skipped.
-2. **Brightness-Based Selection**: Analyzes brightness changes across frames, skipping frames with low variation in lighting to avoid redundant face detection in dim scenes.
+1. **Motion-Based Frame Skipping**: Uses optical flow to detect significant motion between frames. Similar consecutive frames are skipped.
+2. **Brightness-Based Selection**: Analyzes brightness changes across frames, skipping those with little variation to avoid redundant processing in dimly lit scenes.
 
-This reduces unnecessary processing of similar or low-quality frames, improving overall efficiency while retaining important information for face detection.
+These techniques help reduce the processing of unnecessary or low-quality frames, optimizing overall performance while retaining essential data for face detection.
 
 ## Face Embeddings and Clustering
 
 ### Face Embeddings
 
-Embeddings are vector representations of faces in a high-dimensional space. Each face is converted into a numerical representation (embedding) by deep learning models, where similar faces will have closer embeddings in this space. The program uses multiple pre-trained models to generate embeddings for more robust face recognition:
+Face embeddings are vector representations of faces in a high-dimensional space. The system uses multiple deep learning models to convert each detected face into an embedding, where similar faces will have closer embeddings in this space. To ensure robust recognition, several pre-trained models are used:
 
-- VGG-Face
-- OpenFace
-- ArcFace
-- FaceNet
+- **VGG-Face**
+- **OpenFace**
+- **ArcFace**
+- **FaceNet**
 
-The embeddings are then normalized and combined, leveraging the strengths of different models to create a more accurate representation of each face.
+The embeddings from these models are normalized and combined to leverage their individual strengths, producing a more accurate representation of each face.
 
 ### Clustering Algorithms
 
-To match faces across different videos, clustering algorithms group embeddings that are close together in the feature space. The system uses a combination of clustering methods to improve the accuracy of identifying recurring faces:
+To match faces across different videos, the system clusters embeddings based on their proximity in the feature space. A combination of clustering methods improves the system’s accuracy in identifying recurring faces:
 
-1. **Spectral Clustering**: A graph-based clustering technique that partitions the data into clusters by using eigenvalues of similarity matrices.
-2. **DBSCAN (Density-Based Spatial Clustering of Applications with Noise)**: A density-based algorithm that groups closely packed points together, marking outliers as noise.
-3. **Gaussian Mixture Model (GMM)**: A probabilistic model that assumes the data is generated from a mixture of several Gaussian distributions.
+1. **Spectral Clustering**: A graph-based algorithm that partitions data into clusters by analyzing eigenvalues of similarity matrices.
+2. **DBSCAN (Density-Based Spatial Clustering of Applications with Noise)**: A density-based algorithm that groups closely packed points and labels outliers as noise, ideal for filtering false positives.
+3. **Gaussian Mixture Model (GMM)**: A probabilistic model that assumes data points are generated from multiple Gaussian distributions, refining clusters and improving identification accuracy.
 
-By combining these algorithms, the system can identify clusters of recurring faces across videos, even in the presence of noise or outliers.
+By combining these algorithms, the system can accurately identify clusters of recurring faces across multiple videos, even in noisy or complex data.
 
 ## Requirements
 
@@ -55,7 +55,7 @@ By combining these algorithms, the system can identify clusters of recurring fac
 - Facenet-PyTorch
 - Torch
 
-To install the required packages, use:
+To install the required packages, run:
 ```bash
 pip install -r requirements.txt
 ```
@@ -82,16 +82,14 @@ pip install -r requirements.txt
 
 ## Program Structure
 
-- `main.py`: Core script that orchestrates the entire process.
-- `face_detect.py`: Handles the detection of faces from video frames using MTCNN and RetinaFace.
-- `face_classification.py`: Responsible for generating face embeddings using multiple models and clustering those embeddings to match individuals across videos.
-- `data.json`: Logs metadata for each detected face, including image name, video source, and file path.
+- `main.py`: The core script that orchestrates the entire process.
+- `face_detect.py`: Detects faces from video frames using models like MTCNN and RetinaFace.
+- `face_classification.py`: Generates face embeddings using multiple models and clusters them to match individuals across videos.
+- `data.json`: Logs metadata for each detected face, including the image name, video source, and file path.
 
 ## Future Improvements
 
-- Further optimization of cross-video matching
-- Real-time video processing capabilities
-- GPU acceleration for faster analysis
-- Enhanced face tracking methods
-
-For questions or contributions, please open an issue or submit a pull request on the project repository.
+- Further optimize cross-video matching accuracy.
+- Introduce real-time video processing capabilities.
+- Leverage GPU acceleration for faster analysis.
+- Implement enhanced face tracking methods for better consistency.
