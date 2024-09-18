@@ -1,107 +1,183 @@
-import os.path
-from datetime import datetime
-
+import os
 import cv2
-import time
 import numpy as np
-from mtcnn import MTCNN
-from Retinaface.Retinaface import FaceDetector
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from tqdm import tqdm
+import logging
+from pathlib import Path
+from colorama import Fore, Style
 
-class FaceDetection():
+# Import advanced face detection methods
+import insightface
+from insightface.app import FaceAnalysis
+from retinaface import RetinaFace  # RetinaFace detector
+from facenet_pytorch import MTCNN  # MTCNN detector
 
-    def __init__(self,min_face_size = 40, scan_frame_rate = 3, video_name = "video.mp4", downgraded_fps = 9.6):
-        #variables
-        self.count = 0
-        self.skipped_counter = 0
-        self.skipped_counter1 = 0
-        self.current_frame = None
-        self.min_face_size = min_face_size
-        self.scan_frame_rate = scan_frame_rate
-        self.downgraded_fps = downgraded_fps
-        self.video_name = video_name
-        self.starting_point = 0
-        self.video_faces = {}
+class FaceDetection:
+    def __init__(self, logger):
+        self.logger = logger
+        self.setup_face_detectors()
 
-        #models
-        self.mtcnn_face_detector = MTCNN(scale_factor = .4, min_face_size = self.min_face_size, steps_threshold = [0.4, 0.5, 0.6])
-        self.retina_face_detector = FaceDetector(confidence_threshold=.94, name="mobilenet", top_k = 3000, keep_top_k = 500)
+    def setup_face_detectors(self):
+        try:
+            # Initialize multiple face detectors
+            self.face_detectors = {
+                'insightface': FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider']),
+                'retinaface': RetinaFace,
+                'mtcnn': MTCNN(keep_all=True, device='cpu')
+            }
+            self.face_detectors['insightface'].prepare(ctx_id=0, det_size=(640, 640))
+            self.logger.info(Fore.GREEN + "Face detectors initialized successfully.")
+        except Exception as e:
+            self.logger.error(Fore.RED + f"Error setting up face detectors: {str(e)}")
+            raise
 
-    def get_faces(self):
-        face_name = str(round(self.count / self.downgraded_fps, 2))
-        faces = self.retina_face_detector.detect_align(self.current_frame,threshold=.99)
-        for i,face in enumerate(faces):
-            self.video_faces[face_name+str(i)] = np.array(face)
+    def process_videos(self, input_dir):
+        video_paths = [os.path.join(root, file) for root, _, files in os.walk(input_dir)
+                       for file in files if file.lower().endswith(('.mp4', '.avi', '.mov', '.mkv'))]
 
-    def store_image(self, img_data, face_name):
-        cv2.imwrite("result/"+ self.video_name + "/" + face_name + ".jpg", img_data)
+        if not video_paths:
+            self.logger.warning(Fore.YELLOW + f"No video files found in {input_dir}")
+            return
 
-    def check_frame_similarity(self,next_frame):
+        os.makedirs("result", exist_ok=True)
+        self.logger.info(Fore.BLUE + "Starting video processing...\n")
 
-        if (self.current_frame is None):
-            return True
-        #start = time.perf_counter()
-        # brightness
-        next_frame_gray = cv2.cvtColor(next_frame, cv2.COLOR_BGR2GRAY)
-        next_mean_brightness = np.mean(next_frame_gray) / 255
-        current_frame_gray = cv2.cvtColor(self.current_frame, cv2.COLOR_BGR2GRAY)
+        for video_path in tqdm(video_paths, desc=Fore.CYAN + "Processing videos", unit="video"):
+            try:
+                self.process_video(video_path)
+                self.logger.info(Fore.GREEN + f"Processed video: {os.path.basename(video_path)}")
+            except Exception as e:
+                self.logger.error(Fore.RED + f"Error processing video {video_path}: {str(e)}")
 
-        # https://docs.opencv.org/3.4/d4/dee/tutorial_optical_flow.html --> param
-        # flow for (x,y) stored in third dimension
-        flow = cv2.calcOpticalFlowFarneback(cv2.resize(next_frame_gray, (900, 900)),
-                                            cv2.resize(current_frame_gray, (900, 900)), None, 0.5, 3, 15, 3, 5, 1.2, 0)
+    def process_video(self, video_path):
+        try:
+            cap = cv2.VideoCapture(video_path)
 
-        # get x-, y-components
-        flow_x = flow[..., 0]
-        flow_y = flow[..., 1]
-        magnitude, angle = cv2.cartToPolar(flow_x, flow_y, angleInDegrees=True)
-        flow_mean = np.mean(magnitude) / 10
-        #end = time.perf_counter()
-        #print(f"similarity dpf: {end - start}")
-        cv2.putText(next_frame, f'brightness:{next_mean_brightness:.2f}', (50, 85), cv2.FONT_HERSHEY_SIMPLEX, 1,
-                    (0, 255, 0), 2)
-        cv2.putText(next_frame, f'flow      :{flow_mean:.2f}', (50, 120), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        cv2.putText(next_frame, f'skipped   :{self.skipped_counter}', (50, 155), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0),
-                    2)
-        if ((flow_mean < .65 and next_mean_brightness > 0.25 and self.skipped_counter != 3) or (
-                flow_mean < 0.35 and next_mean_brightness < 0.1 and self.skipped_counter != 7)):
-            self.skipped_counter += 1
-            self.skipped_counter1 += 1
+            if not cap.isOpened():
+                self.logger.error(Fore.RED + f"Could not open video file: {video_path}")
+                return
+
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+            video_name = os.path.basename(video_path).rsplit('.', 1)[0]
+            os.makedirs(f"result/{video_name}", exist_ok=True)
+
+            frame_indices = self.select_frames(cap, total_frames, fps)
+
+            for frame_number in tqdm(frame_indices, desc=f"Processing frames of {video_name}", unit="frame"):
+                cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
+                ret, frame = cap.read()
+                if not ret:
+                    self.logger.error(Fore.RED + f"Failed to read frame {frame_number} from {video_path}")
+                    continue
+
+                faces = self.detect_faces(frame)
+                num_faces = len(faces)
+                self.logger.debug(Fore.BLUE + f"Detected {num_faces} faces in frame {frame_number}")
+
+                for idx, face_info in enumerate(faces):
+                    aligned_face = face_info['aligned_face']
+                    timestamp = frame_number / fps
+                    face_filename = f"{timestamp:.2f}_{idx}.jpg"
+                    cv2.imwrite(f"result/{video_name}/{face_filename}", aligned_face)
+
+            cap.release()
+        except Exception as e:
+            self.logger.error(Fore.RED + f"Error processing video {video_path}: {str(e)}")
+
+    def select_frames(self, cap, total_frames, fps):
+        # Use advanced frame selection methods (e.g., scene detection)
+        # For simplicity, select one frame per second
+        frame_step = max(int(fps), 1)
+        frame_indices = list(range(0, total_frames, frame_step))
+        return frame_indices
+
+    def detect_faces(self, frame):
+        # Combine detections from multiple detectors
+        faces = []
+
+        # InsightFace detection
+        insight_faces = self.face_detectors['insightface'].get(frame)
+        for face in insight_faces:
+            if self.is_high_quality_face(face, frame):
+                aligned_face = face_align.norm_crop(frame, face.kps)
+                faces.append({'aligned_face': aligned_face})
+
+        # RetinaFace detection
+        retina_faces = RetinaFace.detect_faces(frame)
+        if isinstance(retina_faces, dict):
+            for key in retina_faces.keys():
+                face_data = retina_faces[key]
+                facial_area = face_data['facial_area']
+                x1, y1, x2, y2 = facial_area
+                face_img = frame[y1:y2, x1:x2]
+                if self.is_face_size_adequate(face_img):
+                    faces.append({'aligned_face': face_img})
+
+        # MTCNN detection
+        boxes, _ = self.face_detectors['mtcnn'].detect(frame)
+        if boxes is not None:
+            for box in boxes:
+                x1, y1, x2, y2 = map(int, box)
+                face_img = frame[y1:y2, x1:x2]
+                if self.is_face_size_adequate(face_img):
+                    faces.append({'aligned_face': face_img})
+
+        return faces
+
+    def is_high_quality_face(self, face, frame):
+        # Implement face quality assessment
+        if not self.is_frontal_face(face):
             return False
-        self.skipped_counter = 0
+        quality_score = self.assess_face_quality(face, frame)
+        if quality_score < 0.4:
+            return False
         return True
 
-    def get_video_frame_faces(self,video_path, starting_point = 0):
+    def is_frontal_face(self, face):
+        # Check the facial landmarks symmetry
+        left_eye = face.kps[0]
+        right_eye = face.kps[1]
+        mouth_left = face.kps[3]
+        mouth_right = face.kps[4]
 
-        vid = cv2.VideoCapture(video_path)
-        mean_frame_duration = []
-        total_frames = int(vid.get(cv2.CAP_PROP_FRAME_COUNT))
-        fps = vid.get(cv2.CAP_PROP_FPS)
-        frames = range(int(starting_point*fps), total_frames, int(fps/9.6))
+        eye_distance = np.linalg.norm(left_eye - right_eye)
+        mouth_distance = np.linalg.norm(mouth_left - mouth_right)
+        ratio = eye_distance / mouth_distance if mouth_distance != 0 else 0
 
-        self.starting_point = starting_point
-        self.count = int(starting_point * fps)
-        self.video_name = os.path.basename(video_path).rsplit('.', 1)[0]
-        self.skipped_count = 0
+        if ratio < 0.5 or ratio > 2.0:
+            return False
+        return True
 
-        print("\n")
-        print(datetime.now().strftime("%H:%M:%S"))
-        print(f"total: {len(frames)}")
-        for frame_number in frames:
-            start = time.perf_counter()
+    def assess_face_quality(self, face, frame):
+        # Face quality assessment based on sharpness and brightness
+        bbox = face.bbox.astype(int)
+        x1, y1, x2, y2 = bbox
+        h, w = frame.shape[:2]
+        x1 = max(0, x1)
+        y1 = max(0, y1)
+        x2 = min(w, x2)
+        y2 = min(h, y2)
+        face_img = frame[y1:y2, x1:x2]
 
-            self.count += 1
-            vid.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
-            ret, frame = vid.read()
-            if ret and self.check_frame_similarity(frame):
-                self.current_frame = frame
-                self.get_faces()
-            else:
-                self.current_frame = frame
-            end = time.perf_counter()
-            mean_frame_duration.append(end-start)
+        if face_img.shape[0] < 50 or face_img.shape[1] < 50:
+            return 0.0
 
-        vid.release()
-        print(f"skipped : {self.skipped_counter1}")
-        print(f"mean dpf: {sum(mean_frame_duration)/len(mean_frame_duration)}")
-        print(datetime.now().strftime("%H:%M:%S"))
-        print("\n")
+        gray_face = cv2.cvtColor(face_img, cv2.COLOR_BGR2GRAY)
+        laplacian_var = cv2.Laplacian(gray_face, cv2.CV_64F).var()
+        if laplacian_var < 30:
+            return 0.0
+
+        brightness = np.mean(gray_face)
+        if brightness < 40 or brightness > 220:
+            return 0.0
+
+        sharpness_score = min(laplacian_var / 300, 1.0)
+        brightness_score = 1.0 - abs(brightness - 128) / 128
+        quality_score = (sharpness_score + brightness_score) / 2
+        return quality_score
+
+    def is_face_size_adequate(self, face_img):
+        return face_img.shape[0] >= 50 and face_img.shape[1] >= 50
