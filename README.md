@@ -4,46 +4,46 @@
 
 ## Overview
 
-This project processes video footage to detect faces, generate embeddings, and identify recurring individuals across multiple videos. Originally designed for war journalism and evacuations, it has been optimized for accuracy and performance. The system allows users to customize video directories, creating individual folders for each detected face, along with logs that track where each face appears across different videos. By using multiple face detection and embedding models, the system ensures higher precision and performance.
+This project processes video footage to detect faces, generate embeddings, and identify recurring individuals across multiple videos. Originally designed for war journalism and evacuations, it has been optimized for accuracy and performance. The system creates individual folders for each detected face, along with logs that track where each face appears across different videos. By using a combination of detection and clustering techniques, the system maximizes both precision and speed.
 
 ## Key Features
 
 ### Optimized Frame Selection
-The system applies advanced techniques to avoid redundant frame processing, boosting both accuracy and efficiency:
-1. **Motion Detection**: Frames are skipped if minimal motion is detected using **optical flow** techniques. This ensures that the system only processes frames with significant motion changes, reducing unnecessary computations.
-2. **Brightness Analysis**: Low-light frames are filtered out by comparing brightness histograms. This ensures that the system avoids processing frames that are too dark to provide useful data.
+Advanced techniques avoid redundant frame processing:
+1. **Motion Detection**: Frames with minimal motion are skipped using **optical flow**, reducing unnecessary processing.
+2. **Brightness Analysis**: Low-light frames are filtered out to avoid processing poor-quality images.
 
-*Reason for combination*: Combining motion detection and brightness analysis helps the system filter out both redundant frames and low-quality frames, significantly reducing the time spent processing frames that do not contribute meaningful data.
+*Combination rationale*: Together, these techniques reduce the processing of irrelevant frames while ensuring important data is preserved, making the system faster without losing accuracy.
 
 ### Face Detection
-Multiple face detection models are used in tandem to increase precision, making the system robust to variations in lighting, face angles, and occlusions:
-- **MTCNN** (Multi-task Cascaded Convolutional Networks): Effective for detecting facial landmarks and recognizing faces from multiple angles.
-- **RetinaFace**: Robust for detecting faces in low-light conditions and complex environments.
-- **SCRFD** (InsightFace): Lightweight and optimized for real-time detection, providing a balance of speed and accuracy.
+Multiple models are used for robust face detection:
+- **MTCNN**: Handles multiple face angles and provides facial landmark detection.
+- **RetinaFace**: Known for detecting faces in difficult conditions such as low light.
+- **SCRFD** (InsightFace): Lightweight and fast, suitable for real-time detection.
 
-*Reason for combination*: By combining **MTCNN**'s landmark detection with **SCRFD**’s real-time performance, the system ensures precise face detection even in challenging environments while remaining computationally efficient.
+*Combination rationale*: Combining models enhances precision in detecting faces under various conditions, such as occlusion or poor lighting, while maintaining fast performance.
 
 ### Face Embeddings
-Face embeddings are generated using multiple state-of-the-art models to ensure robust face recognition:
-- **ArcFace** (InsightFace): Provides highly accurate embeddings, especially for large datasets.
-- **FaceNet**: Known for generating compact embeddings with high recall, useful for diverse face datasets.
-- **VGG-Face**: Produces highly separable embeddings, which are especially useful when combined with other models.
-- **InceptionResnetV1**: Reliable for generating embeddings for both frontal and side faces.
+Face embeddings are generated using multiple models for higher accuracy:
+- **ArcFace**: High accuracy, especially for large datasets.
+- **FaceNet**: Generates compact embeddings with high recall.
+- **VGG-Face**: Provides highly separable embeddings that improve overall accuracy.
+- **InceptionResnetV1**: Suitable for both frontal and side views of faces.
 
-*Reason for combination*: Using multiple models ensures that the system produces robust face embeddings across different scenarios. By normalizing and combining embeddings from multiple models, the system enhances accuracy and reduces the risk of false matches.
+*Combination rationale*: The variety of models ensures that the system can handle a wide range of conditions and face angles, improving the robustness of face recognition.
 
 ### Clustering and Matching
-To identify recurring faces across multiple videos, the project uses a hybrid clustering approach:
-- **DBSCAN**: Density-based clustering for filtering out noise and false positives, useful in large datasets with variable densities.
-- **KMeans**: A fast clustering algorithm that handles large datasets with predefined cluster numbers.
-- **Spectral Clustering**: Excellent for complex, graph-based partitioning of data.
-- **Agglomerative Clustering**: A hierarchical approach, ideal for nested or hierarchical relationships between faces.
+Multiple clustering methods are used to group similar faces across videos:
+- **DBSCAN**: Filters noise and false positives.
+- **KMeans**: Efficient for handling large datasets.
+- **Spectral Clustering**: Suitable for complex data structures.
+- **Agglomerative Clustering**: Hierarchical clustering for better structure in datasets.
 
-*Reason for combination*: Each clustering algorithm has unique strengths. **DBSCAN** excels at filtering noise, while **KMeans** is useful for handling large datasets quickly. **Agglomerative Clustering** is suitable for creating hierarchical structures when faces appear in different contexts. Combining these methods ensures precise clustering of recurring faces across multiple videos.
+*Combination rationale*: Using different clustering algorithms improves the precision of matching faces across multiple videos, even in noisy datasets.
 
 ### Metadata and Logging
-- **Folder-based structure**: A separate folder is created for each detected face, storing all instances of that face across different videos.
-- **Metadata logs**: Each folder contains a log file that tracks where and when the face was detected in each video, aiding in the analysis of recurring individuals.
+- **Folder-based structure**: Each detected face has a dedicated folder storing all occurrences of that face.
+- **Metadata logs**: A log file in each folder tracks where and when the face appears across videos.
 
 ## Requirements
 
@@ -56,12 +56,13 @@ To identify recurring faces across multiple videos, the project uses a hybrid cl
 - Facenet-PyTorch
 - Torch
 
-To install the required packages, run:
+To install the required packages:
 ```bash
 pip install -r requirements.txt
 ```
 
 ## Installation
+
 1. Clone the repository:
    ```bash
    git clone https://github.com/fersenhaIter/cross_video_identification.git
@@ -73,24 +74,24 @@ pip install -r requirements.txt
 
 ## Usage
 
-1. Place your video files in the designated folder.
+1. Place video files in the designated folder.
 2. Run the main script:
    ```bash
    python main.py
    ```
-3. The terminal interface allows you to input custom folder names. If folders don’t exist, the system will create them.
-4. Detected faces are saved in individual folders, and metadata logs are created for each face, containing information about where and when the face appears in different videos.
+3. The terminal interface allows custom folder names. If folders don’t exist, they will be created.
+4. Detected faces are saved in individual folders, and metadata logs track when and where the face appears in the videos.
 
 ## Current Issues and Next Steps
 
-1. **EXIF Data Extraction**: The current program relies on `exiftool`, but there have been compatibility issues. Consider replacing it with a Python-native library like **exifread** or **Pillow** for metadata extraction.
-2. **Face Matching Accuracy**: The combination of models is effective, but further tuning of hyperparameters, such as distance thresholds in clustering, will enhance accuracy.
-3. **Performance Optimization**: GPU acceleration (CUDA) should be implemented to speed up face embedding generation and clustering, especially for large datasets.
-4. **Improved User Interface**: The terminal UI could be enhanced using frameworks like **Rich** or **BeautifulTerminal** to provide better visualization and debugging options.
-5. **Real-time Processing**: Adding real-time processing support will allow for live face identification using models like SCRFD for faster results.
+1. **EXIF Data Extraction**: The system currently relies on `exiftool`, which can cause compatibility issues. Consider using **exifread** or **Pillow** for native Python EXIF handling.
+2. **Hyperparameter Tuning**: Fine-tuning distance thresholds in clustering algorithms will improve face matching accuracy.
+3. **Performance Optimization**: Implement GPU acceleration with CUDA to speed up embedding generation and clustering, especially for larger datasets.
+4. **Enhanced User Interface**: The terminal UI can be improved using libraries like **Rich** or **BeautifulTerminal** to enhance user experience and provide better visualization.
+5. **Real-time Processing**: Adding support for real-time processing with SCRFD can improve the system’s utility in live settings.
 
 ## Future Enhancements
 
-- **GPU Acceleration**: Implementing CUDA for large-scale video processing and real-time face detection.
-- **Web-based Interface**: Introducing a web-based user interface to make input and log viewing more user-friendly.
-- **Cloud Integration**: Support for cloud-based storage and distributed processing to handle larger datasets more efficiently.
+- **GPU Acceleration**: Implement CUDA for real-time processing.
+- **Web Interface**: Add a web-based UI for easier control and log viewing.
+- **Cloud Integration**: Enable cloud-based storage and processing for large datasets.
